@@ -11,8 +11,13 @@ módulos, `requirements.txt` e o notebook estão vazios.
 
 ## Fase 0 — Setup (26/09, ~1h)
 - [ ] Mandar ao professor as dúvidas da A1 + gerais + as bloqueantes da A2/A4 (uma mensagem só)
-- [ ] `git init` na raiz `Deep-Learning-Visao-Computacional/`, `.gitignore` (dados, checkpoints, outputs pesados), primeiro commit, repositório público
+- [x] `git init` na raiz `Deep-Learning-Visao-Computacional/`, `.gitignore` (dados, checkpoints, outputs pesados), primeiro commit, repositório público — https://github.com/anacaetano02/Deep-Learning-Visao-Computacional
 - [ ] Notebook: célula de setup (clone local **ou** Drive, `sys.path` para `A1_vision_transformers/`, checagem de GPU T4) — R7
+  - [x] Clone (sparse, só `A1_vision_transformers/`), `sys.path`, import do `src` e GPU T4 confirmados no Colab
+  - [x] Autoreload ligado
+  - [ ] Mover a célula de `git pull` para **depois** do clone (hoje ela usa `REPO_DIR` antes de ele existir)
+  - [ ] Testar o modo `SALVAR_NO_DRIVE = True`
+  - [ ] Commit + push do notebook
 - [ ] `requirements.txt` com as versões usadas — R7
 - [ ] Testar o setup num runtime **limpo** do Colab
 
