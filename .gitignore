@@ -1,0 +1,41 @@
+# Instruções locais do Claude Code (não versionar)
+CLAUDE.md
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Credenciais (nunca versionar)
+kaggle.json
+*.token
+
+# Datasets (baixados no Colab ou lidos do Drive)
+data/
+datasets/
+*.zip
+
+# Checkpoints de modelo
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+
+# Rastreamento de experimentos / logs pesados
+mlruns/
+runs/
+wandb/
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
