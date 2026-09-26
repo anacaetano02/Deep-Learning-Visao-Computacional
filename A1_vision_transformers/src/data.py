@@ -1,237 +1,213 @@
+"""Metadados e split por lesão do HAM10000."""
+from pathlib import Path
+
 import polars as pl
-import duckdb
-import matplotlib.pyplot as plt
-import numpy as np
-from IPython.display import display
+from sklearn.model_selection import train_test_split
 
-def analyze_skin_cancer_data(dataset):
+# Nome da coluna-alvo definido uma única vez: o split é estratificado por ela
+# e não há parâmetro para trocá-la por engano (ex.: "dx_type").
+COLUNA_ALVO = "dx"
+COLUNA_GRUPO = "lesion_id"
+N_IMAGENS_UNICAS = 10_015
+
+# data.py fica em A1_vision_transformers/src/, então o projeto é o diretório
+# acima. Não depende do diretório atual (no Colab, /content).
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+CAMINHO_SPLIT = PROJECT_DIR / "split_lesoes.csv"
+
+COLUNAS_SPLIT = [
+    "image_id", COLUNA_GRUPO, COLUNA_ALVO,
+    "split", "split_original", "idx_original",
+]
+
+
+def extrair_metadados(dataset):
     """
-    Realiza uma análise abrangente do conjunto de dados de câncer de pele, incluindo
-    extração de metadados, análise de distribuição entre divisões (treino, validação, teste),
-    índices de desequilíbrio, verificação de vazamento e estatísticas demográficas básicas.
-
-    Args:
-        dataset: Um objeto `DatasetDict` carregado do Hugging Face contendo as divisões 'train',
-                 'validation' e 'test', cada uma com imagem e metadados.
-
-    Returns:
-        tuple: Uma tupla contendo os DataFrames Polars processados:
-               (df_train, df_validation, df_test, df_comparativo)
+    Devolve um único DataFrame com as colunas de metadado, mais duas colunas novas:
+    * split_original (train/validation/test): serve para reproduzir as tabelas de vazamento do "antes" no relatório;
+    * idx_original, a posição da linha dentro do split do Hugging Face.
     """
 
-    print("--- Extraindo Metadados e Criando DataFrames Polars ---")
-    train_data = dataset['train']
-    validation_data = dataset['validation']
-    test_data = dataset['test']
+    def split_para_polars(dataset, split: str, colunas_remover=("image",)) -> pl.DataFrame:
+        """Converte um split do dataset (Hugging Face) em DataFrame Polars, sem as colunas indicadas."""
+        dados = dataset[split].remove_columns(list(colunas_remover))
+        return pl.from_pandas(dados.to_pandas())
 
-    # extrai só as colunas de metadado, sem carregar a imagem em si
-    train_meta = train_data.remove_columns("image").to_pandas()
-    df_train = pl.from_pandas(train_meta)
+    def carregar_splits(dataset, splits=("train", "validation", "test")) -> dict[str, pl.DataFrame]:
+        """Retorna um dicionário {nome_do_split: DataFrame Polars}."""
+        return {split: split_para_polars(dataset, split) for split in splits}
 
-    validation_meta = validation_data.remove_columns("image").to_pandas()
-    df_validation = pl.from_pandas(validation_meta)
+    def concatenar_splits(dfs: dict[str, pl.DataFrame]) -> pl.DataFrame:
+        """Junta os splits num único DataFrame, preservando o índice original e a origem de cada linha."""
+        partes = [
+            df.with_row_index("idx_original").with_columns(pl.lit(nome).alias("split_original"))
+            for nome, df in dfs.items()
+        ]
+        return pl.concat(partes, how="vertical_relaxed")
 
-    test_meta = test_data.remove_columns("image").to_pandas()
-    df_test = pl.from_pandas(test_meta)
-
-    print(f"df_train shape: {df_train.shape}")
-    display(df_train.head())
-    print(f"df_validation shape: {df_validation.shape}")
-    display(df_validation.head())
-    print(f"df_test shape: {df_test.shape}")
-    display(df_test.head())
-
-    print("\n--- Análise da Distribuição de Classes para o Conjunto de Treino ---")
-    distribuicao = duckdb.sql("""
-      select
-        dx,
-        count(*) as contagem,
-        round(count(*) * 100.0 / sum(count(*)) over (), 2) as percentual
-      from df_train
-      group by dx
-      order by contagem desc
-    """).pl()
-    display(distribuicao)
-
-    razao_desbalanceamento = duckdb.sql("""
-      select max(contagem) / min(contagem) as razao from distribuicao
-    """).pl()
-    print("Taxa de Desequilíbrio do Treino:")
-    display(razao_desbalanceamento)
-
-    distribuicao_com_razao = duckdb.sql("""
-      select
-        t1.*,
-        round(max(t1.contagem) over () / t1.contagem, 1) as razao_vs_majoritaria
-      from distribuicao t1
-      group by dx, contagem, percentual
-      order by contagem desc
-    """).pl()
-    print("Distribuição do Treino com Taxa de Desequilíbrio (vs. classe majoritária):")
-    display(distribuicao_com_razao)
-
-    print("\n--- Análise da Distribuição de Classes para o Conjunto de Validação ---")
-    distribuicao_validacao = duckdb.sql("""
-      select
-        dx,
-        count(*) as contagem,
-        round(count(*) * 100.0 / sum(count(*)) over (), 2) as percentual
-      from df_validation
-      group by dx
-      order by contagem desc
-    """).pl()
-    display(distribuicao_validacao)
-
-    razao_desbalanceamento_val = duckdb.sql("""
-      select max(contagem) / min(contagem) as razao from distribuicao_validacao
-    """).pl()
-    print("Taxa de Desequilíbrio da Validação:")
-    display(razao_desbalanceamento_val)
-
-    distribuicao_com_razao_val = duckdb.sql("""
-      select
-        t1.*,
-        round(max(t1.contagem) over () / t1.contagem, 1) as razao_vs_majoritaria
-      from distribuicao_validacao t1
-      group by dx, contagem, percentual
-      order by contagem desc
-    """).pl()
-    print("Distribuição da Validação com Taxa de Desequilíbrio (vs. classe majoritária):")
-    display(distribuicao_com_razao_val)
-
-    print("\n--- Análise da Distribuição de Classes para o Conjunto de Teste ---")
-    distribuicao_test = duckdb.sql("""
-      select
-        dx,
-        count(*) as contagem,
-        round(count(*) * 100.0 / sum(count(*)) over (), 2) as percentual
-      from df_test
-      group by dx
-      order by contagem desc
-    """).pl()
-    display(distribuicao_test)
-
-    razao_desbalanceamento_test = duckdb.sql("""
-      select max(contagem) / min(contagem) as razao from distribuicao_test
-    """).pl()
-    print("Taxa de Desequilíbrio do Teste:")
-    display(razao_desbalanceamento_test)
-
-    distribuicao_com_razao_test = duckdb.sql("""
-      select
-        t1.*,
-        round(max(t1.contagem) over () / t1.contagem, 1) as razao_vs_majoritaria
-      from distribuicao_test t1
-      group by dx, contagem, percentual
-      order by contagem desc
-    """).pl()
-    print("Distribuição do Teste com Taxa de Desequilíbrio (vs. classe majoritária):")
-    display(distribuicao_com_razao_test)
-
-    print("\n--- Distribuição Comparativa Entre as Divisões ---")
-    df_comparativo = duckdb.sql("""
-      select
-        t1.dx,
-        t1.contagem as contagem_treino,
-        t2.contagem as contagem_validacao,
-        t3.contagem as contagem_teste,
-        t1.percentual as percentual_treino,
-        t2.percentual as percentual_validacao,
-        t3.percentual as percentual_teste,
-        t1.razao_vs_majoritaria as razao_vs_majoritaria_treino,
-        t2.razao_vs_majoritaria as razao_vs_majoritaria_validacao,
-        t3.razao_vs_majoritaria as razao_vs_majoritaria_test
-      from distribuicao_com_razao t1
-      join distribuicao_com_razao_val t2 on t1.dx = t2.dx
-      join distribuicao_com_razao_test t3 on t1.dx = t3.dx
-    """).pl()
-    print(f"df_comparativo shape: {df_comparativo.shape}")
-    display(df_comparativo.head())
-
-    # Plot comparative distribution
-    print("\n--- Plotando a Distribuição Comparativa de Classes ---")
-    x = np.arange(len(df_comparativo))
-    largura = 0.25
-
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(x - largura, df_comparativo["percentual_treino"], largura, label="Treino")
-    ax.bar(x, df_comparativo["percentual_validacao"], largura, label="Validação")
-    ax.bar(x + largura, df_comparativo["percentual_teste"], largura, label="Teste")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(df_comparativo["dx"], rotation=45, ha="right")
-    ax.set_ylabel("Percentual")
-    ax.set_title("Comparação da Distribuição de Classes entre Conjuntos de Dados")
-    ax.legend()
-    plt.tight_layout()
-    plt.show()
-
-    print("\n--- Análise de Vazamento (ID da Lesão) ---")
-    # Assumindo que df_train, df_validation, df_test estão disponíveis das etapas anteriores
-    df_lesion = duckdb.sql("""
-      select distinct
-        t.lesion_id,
-        case
-          when t2.lesion_id is not null then 1
-          else 0
-        end as is_validation,
-        case
-          when t3.lesion_id is not null then 1
-          else 0
-        end as is_test
-      from df_train t
-      left join df_validation t2 on t.lesion_id = t2.lesion_id
-      left join df_test t3 on t.lesion_id = t3.lesion_id
-      where t2.lesion_id is not null or t3.lesion_id is not null
-    """).pl()
-    print(f"df_lesion shape: {df_lesion.shape}")
-    display(df_lesion.head())
-
-    contagem_lesion = duckdb.sql("""
-      select
-        sum(is_validation) as qtd_validation_overlap,
-        sum(is_test) as qtd_test_overlap
-      from df_lesion
-    """).pl()
-    print("Sobreposição de lesion_id entre treino e validação/teste:")
-    display(contagem_lesion)
-
-    unique_lesions_in_train = df_train["lesion_id"].n_unique()
-    total_overlapping_lesions = df_lesion.height
-    percentual_vazamento = (total_overlapping_lesions / unique_lesions_in_train) * 100
-    print(f"\nTotal de lesion_ids únicos no treino: {unique_lesions_in_train}")
-    print(f"Número de lesion_ids no treino que aparecem na validação ou teste: {total_overlapping_lesions}")
-    print(f"Porcentagem de vazamento: {percentual_vazamento:.2f}%")
+    dfs = carregar_splits(dataset)
+    return concatenar_splits(dfs)
 
 
-    print("\n--- Estatísticas de Idade por Classe ---")
-    age_stats = df_train.group_by("dx").agg(
-        pl.col("age").mean().round(1).alias("idade_media"),
-        pl.col("age").median().alias("idade_mediana"),
-        pl.col("age").null_count().alias("faltantes"),
-        pl.col("age").min().alias("idade_min"),
-        pl.col("age").max().alias("idade_max"),
-    ).sort("idade_media", descending=True)
-    display(age_stats)
+def deduplicar_por_imagem(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Remove duplicatas por image_id, mantendo a primeira ocorrência (do split "train").
+    Antes, garante que as cópias de uma mesma imagem concordam em dx e lesion_id,
+    para que o keep="first" não escolha entre valores divergentes em silêncio.
+    """
+    divergentes = (
+        df.group_by("image_id")
+          .agg(
+              pl.col(COLUNA_ALVO).n_unique().alias("n_alvo"),
+              pl.col(COLUNA_GRUPO).n_unique().alias("n_grupo"),
+          )
+          .filter((pl.col("n_alvo") > 1) | (pl.col("n_grupo") > 1))
+    )
+    assert divergentes.height == 0, (
+        f"{divergentes.height} image_id com {COLUNA_ALVO} ou {COLUNA_GRUPO} divergentes, "
+        f"ex.: {divergentes['image_id'].head(5).to_list()}"
+    )
 
-    print("\n--- Distribuição de Gênero por Classe ---")
-    gender_dist = df_train.group_by(["dx", "sex"]).agg(
-        pl.len().alias("contagem")
-    ).with_columns(
-        (pl.col("contagem") / pl.col("contagem").sum().over("dx") * 100).round(1).alias("percentual_na_classe")
-    ).sort(["dx", "sex"])
-    display(gender_dist)
+    df = df.unique(subset="image_id", keep="first", maintain_order=True)
+    assert df.height == N_IMAGENS_UNICAS, (
+        f"Esperava {N_IMAGENS_UNICAS} imagens únicas, sobraram {df.height}"
+    )
+    return df
 
-    print("\n--- Distribuição de Localização por Classe (Top 3) ---")
-    localization_dist = df_train.group_by(["dx", "localization"]).agg(
-        pl.len().alias("contagem")
-    ).with_columns(
-        pl.col("contagem").rank(method="ordinal", descending=True).over("dx").alias("posicao")
-    ).filter(pl.col("posicao") <= 3).sort(["dx", "posicao"])
-    display(localization_dist)
 
-    print("\n--- Amostras com Idade 0 ---")
-    age_zero_count = df_train.filter(pl.col("age") == 0).height
-    print(f"Número de amostras nos dados de treino com idade 0: {age_zero_count}")
+def montar_split_por_lesao(df: pl.DataFrame, proporcoes: dict[str, float], seed: int) -> pl.DataFrame:
+    """
+    Divide o dataset por lesão: todas as imagens de uma mesma lesão ficam no mesmo split,
+    e a proporção de cada classe (COLUNA_ALVO) é mantida em todos os splits.
+    proporcoes: dict ordenado, ex. {"test": 0.15, "validation": 0.15, "train": 0.70}
+    Retorna o DataFrame de entrada com a coluna "split".
+    """
+    assert abs(sum(proporcoes.values()) - 1) < 1e-9, "As proporções devem somar 1"
 
-    return df_train, df_validation, df_test, df_comparativo
+    # Cada lesão precisa ter uma única classe, senão a estratificação por lesão não faz sentido
+    inconsistentes = (
+        df.group_by(COLUNA_GRUPO)
+          .agg(pl.col(COLUNA_ALVO).n_unique().alias("n_classes"))
+          .filter(pl.col("n_classes") > 1)
+    )
+    assert inconsistentes.height == 0, f"{inconsistentes.height} lesões com mais de uma classe"
+
+    # Uma linha por lesão
+    lesoes = (
+        df.unique(subset=COLUNA_GRUPO, keep="first", maintain_order=True)
+          .select(COLUNA_GRUPO, COLUNA_ALVO)
+    )
+    ids = lesoes[COLUNA_GRUPO].to_list()
+    estratos = lesoes[COLUNA_ALVO].to_list()
+
+    # Vai "separando" um split de cada vez do que sobrou; o último fica com o resto
+    nomes = list(proporcoes)
+    restante = 1.0
+    atribuicao = {}
+    for nome in nomes[:-1]:
+        fracao = proporcoes[nome] / restante  # ex.: 0.15 / 0.85 = 0.176... do que sobrou
+        ids_split, ids, _, estratos = train_test_split(
+            ids, estratos, train_size=fracao, stratify=estratos, random_state=seed
+        )
+        atribuicao[nome] = ids_split
+        restante -= proporcoes[nome]
+    atribuicao[nomes[-1]] = ids
+
+    mapa = pl.DataFrame({
+        COLUNA_GRUPO: pl.Series(
+            [i for nome in nomes for i in atribuicao[nome]], dtype=df.schema[COLUNA_GRUPO]
+        ),
+        "split": [nome for nome in nomes for _ in atribuicao[nome]],
+    })
+
+    n_antes = df.height
+    df_com_split = df.join(mapa, on=COLUNA_GRUPO, how="left")
+
+    # O n_unique conta null como valor, então nulos precisam de checagem própria
+    n_nulos = df_com_split["split"].null_count()
+    assert n_nulos == 0, f"{n_nulos} imagens ficaram sem split após o join"
+    assert df_com_split.height == n_antes, (
+        f"O join mudou o número de linhas: {n_antes} -> {df_com_split.height}"
+    )
+
+    # Nenhuma lesão aparece em mais de um split
+    lesoes_multiplas = (
+        df_com_split.group_by(COLUNA_GRUPO)
+                    .agg(pl.col("split").n_unique().alias("n_splits"))
+                    .filter(pl.col("n_splits") > 1)
+    )
+    assert lesoes_multiplas.height == 0, f"{lesoes_multiplas.height} lesões em mais de um split"
+
+    return df_com_split
+
+
+def checar_vazamento(df: pl.DataFrame, coluna: str) -> dict[str, set]:
+    """Para cada par de splits, retorna os valores de `coluna` que aparecem nos dois."""
+    valores_por_split = {
+        split: set(df.filter(pl.col("split") == split)[coluna])
+        for split in sorted(df["split"].unique().to_list())
+    }
+
+    splits = list(valores_por_split)
+    vazamentos = {}
+    for i in range(len(splits)):
+        for j in range(i + 1, len(splits)):
+            a, b = splits[i], splits[j]
+            vazamentos[f"{a}_vs_{b}"] = valores_por_split[a] & valores_por_split[b]
+
+    return vazamentos
+
+
+def validar_split(df: pl.DataFrame, colunas=("image_id", COLUNA_GRUPO)) -> None:
+    """Interrompe a execução se houver imagem sem split ou id em mais de um split."""
+    # O filter por split descarta nulos; sem esta checagem eles sumiriam em silêncio
+    n_nulos = df["split"].null_count()
+    assert n_nulos == 0, f"{n_nulos} linhas sem split"
+
+    n_splits = df["split"].n_unique()
+    assert n_splits == 3, f"Esperava 3 splits, encontrei {n_splits}"
+
+    for coluna in colunas:
+        vazamentos = checar_vazamento(df, coluna)
+        assert len(vazamentos) == 3, f"Esperava 3 pares para {coluna}, encontrei {len(vazamentos)}"
+
+        for par, intersecao in vazamentos.items():
+            assert len(intersecao) == 0, (
+                f"Vazamento de {coluna} em {par}: {len(intersecao)} ids, "
+                f"ex.: {sorted(intersecao)[:5]}"
+            )
+
+    print(f"Split OK: zero vazamento de {', '.join(colunas)} entre os pares de splits.")
+
+
+def salvar_split(df: pl.DataFrame, caminho: str | Path = CAMINHO_SPLIT) -> None:
+    """Salva só as colunas necessárias para reconstruir o split, em CSV versionável."""
+    caminho = Path(caminho)
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    df.select(COLUNAS_SPLIT).sort("image_id").write_csv(caminho)
+    print(f"Split salvo em {caminho} ({df.height} linhas)")
+
+
+def carregar_split(caminho: str | Path = CAMINHO_SPLIT) -> pl.DataFrame:
+    """Lê o split salvo por `salvar_split`, com os tipos corretos, e valida as colunas."""
+    caminho = Path(caminho)
+    if not caminho.exists():
+        raise FileNotFoundError(f"Split não encontrado em {caminho}")
+
+    df = pl.read_csv(
+        caminho,
+        schema_overrides={
+            "image_id": pl.String,
+            COLUNA_GRUPO: pl.String,
+            COLUNA_ALVO: pl.String,
+            "split": pl.String,
+            "split_original": pl.String,
+            "idx_original": pl.UInt32,
+        },
+    )
+
+    faltando = set(COLUNAS_SPLIT) - set(df.columns)
+    assert not faltando, f"Colunas ausentes no CSV: {faltando}"
+
+    print(f"Split carregado de {caminho} ({df.height} linhas)")
+    return df.select(COLUNAS_SPLIT)
