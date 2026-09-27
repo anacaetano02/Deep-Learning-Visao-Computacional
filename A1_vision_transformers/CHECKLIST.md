@@ -31,11 +31,11 @@ módulos, `requirements.txt` e o notebook estão vazios.
 - [x] `montar_split_por_lesao` (agrupado por `lesion_id`, estratificado por `dx`, seed fixa, asserts de nulos/altura)
 - [x] `checar_vazamento(df, coluna)` + `validar_split` → `assert` de zero nos pares, por `image_id` e por `lesion_id` ("Split OK" no Colab)
 - [x] Fixar `revision=` no `load_dataset` (`bdd59e10…`, último commit do dataset em 25/01/2023)
-- [ ] Salvar o split em CSV versionado no Git — 🟡 gerado no Colab (disco temporário); falta baixar, commitar em `A1_vision_transformers/split_lesoes.csv` e ver "Split versionado confere com o recalculado"
+- [x] Split em CSV versionado no Git (`split_lesoes.csv`, commit 4d9fad1) — no Colab: "Split versionado confere com o recalculado"
 - [ ] Guardar as tabelas de vazamento "antes" (split do HF) — 🟡 geradas e conferidas (84,47/79,77/16,26 e 91,17/88,09/30,04); falta persistir (Drive/download, de preferência em `DIR_REPORT_ASSETS`)
 - [x] Tabela `dx × split` com nº de imagens e de lesões (antes e depois) — ajustar exibição: colunas `n_lesoes_*` cortadas pelo display do Polars
-- [ ] Mapeamento fixo de rótulos (7 classes em ordem definida → índice)
-- [ ] `calcular_pesos_classes` (só no treino)
+- [x] Mapeamento fixo de rótulos (`CLASSES` + `CLASSE_PARA_INDICE`/`INDICE_PARA_CLASSE`, nomes completos do `dx`)
+- [x] `computar_pesos` (só no treino, por imagem, "balanced"; confere com `compute_class_weight` do sklearn)
 - [ ] `HAM10000Dataset` (busca por `split_original` + `idx_original`, confere `image_id`) + `montar_transforms` + `preparar_dataloaders`
 - [ ] Teste de sanidade com 1 batch (shape, dtype, faixa de valores, rótulos)
 - [x] `/revisar A1_vision_transformers/src/data.py` (2 revisões; revisar de novo com Dataset/DataLoaders)

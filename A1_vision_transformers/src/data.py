@@ -3,6 +3,7 @@ from pathlib import Path
 
 import polars as pl
 from sklearn.model_selection import train_test_split
+import torch
 
 # Nome da coluna-alvo definido uma única vez: o split é estratificado por ela
 # e não há parâmetro para trocá-la por engano (ex.: "dx_type").
@@ -15,6 +16,15 @@ COLUNAS_SPLIT = [
     "image_id", COLUNA_GRUPO, COLUNA_ALVO,
     "split", "split_original", "idx_original",
 ]
+
+
+# Ordem fixa das classes — define o mapeamento string -> índice inteiro.
+# Fixar isso explicitamente (em vez de deixar polars/sklearn inferir a
+# ordem sozinho) garante que o mapeamento não mude entre execuções.
+CLASSES = ["basal_cell_carcinoma", "actinic_keratoses", "benign_keratosis-like_lesions", "melanoma",
+           "dermatofibroma", "vascular_lesions", "melanocytic_Nevi"]
+CLASSE_PARA_INDICE = {c: i for i, c in enumerate(CLASSES)}
+INDICE_PARA_CLASSE = {i: c for c, i in CLASSE_PARA_INDICE.items()}
 
 
 def extrair_metadados(dataset):
@@ -215,3 +225,39 @@ def carregar_split(caminho: str | Path) -> pl.DataFrame:
 
     print(f"Split carregado de {caminho} ({df.height} linhas)")
     return df.select(COLUNAS_SPLIT)
+
+
+def computar_pesos(df: pl.DataFrame, split: str = "train") -> torch.Tensor:
+    """
+    Pesos de classe "balanced" para a CrossEntropyLoss: n_total / (n_classes * n_classe).
+    Recebe o DataFrame completo (com a coluna "split") e usa só as linhas de `split`,
+    para a distribuição de validação/teste não entrar na loss. Conta imagens, não
+    lesões, porque a loss é calculada por imagem. O tensor segue a ordem de CLASSES:
+    peso[i] é o peso da classe de índice i.
+    """
+    df_treino = df.filter(pl.col("split") == split)
+    assert df_treino.height > 0, f"Nenhuma linha com split == {split!r}"
+
+    presentes = set(df_treino[COLUNA_ALVO].unique().to_list())
+    assert presentes == set(CLASSES), (
+        f"Classes do {split} diferentes de CLASSES: "
+        f"faltando {set(CLASSES) - presentes}, sobrando {presentes - set(CLASSES)}"
+    )
+
+    contagens = df_treino.group_by(COLUNA_ALVO).agg(pl.len().alias("n"))
+    contagem_por_classe = dict(zip(contagens[COLUNA_ALVO], contagens["n"]))
+
+    total = df_treino.height
+    num_classes = len(CLASSES)
+
+    # Acesso direto (sem .get): uma classe ausente daria KeyError em vez de peso ~1000
+    pesos = torch.tensor(
+        [total / (num_classes * contagem_por_classe[classe]) for classe in CLASSES],
+        dtype=torch.float32,
+    )
+
+    # Invariante da fórmula "balanced": cada classe contribui igualmente (peso * n = total / k)
+    for classe, peso in zip(CLASSES, pesos.tolist()):
+        assert abs(peso * contagem_por_classe[classe] - total / num_classes) < 1e-3, classe
+
+    return pesos
