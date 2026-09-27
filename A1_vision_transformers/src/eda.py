@@ -1,5 +1,7 @@
-"""Tabelas do relatório: vazamento antes/depois, contagens e distribuição dx × split."""
+"""Tabelas e figuras do relatório: vazamento antes/depois, contagens, dx × split e amostras de batch."""
+import matplotlib.pyplot as plt
 import polars as pl
+import torch
 
 from src.data import COLUNA_ALVO, COLUNA_GRUPO, ORDEM_SPLITS, checar_vazamento
 
@@ -93,3 +95,27 @@ def tabela_classes_por_split(df: pl.DataFrame, coluna_split: str = "split") -> p
           )
           .sort(COLUNA_ALVO)
     )
+
+
+def figura_batch(x: torch.Tensor, y: torch.Tensor, nomes: dict[int, str], media, desvio,
+                 titulo: str, n: int = 8):
+    """
+    Desfaz o Normalize (x * desvio + media) e mostra as n primeiras imagens do batch com o
+    nome da classe. Devolve a figura (quem exibe/salva é o notebook). Serve para conferir
+    visualmente a augmentation (preenchimento de cantos, distorção do resize).
+    """
+    m = torch.tensor(media, dtype=x.dtype).view(1, 3, 1, 1)
+    s = torch.tensor(desvio, dtype=x.dtype).view(1, 3, 1, 1)
+    imgs = (x[:n].cpu() * s + m).clamp(0, 1).permute(0, 2, 3, 1)  # (n, H, W, C) em [0, 1]
+
+    colunas = 4
+    linhas = -(-len(imgs) // colunas)
+    fig, eixos = plt.subplots(linhas, colunas, figsize=(3 * colunas, 3 * linhas))
+    for ax in eixos.flat:
+        ax.axis("off")
+    for ax, img, rotulo in zip(eixos.flat, imgs, y[:n]):
+        ax.imshow(img.numpy())
+        ax.set_title(nomes[int(rotulo)], fontsize=8)
+    fig.suptitle(titulo)
+    fig.tight_layout()
+    return fig

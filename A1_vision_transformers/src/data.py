@@ -1,12 +1,14 @@
 """Metadados e split por lesão do HAM10000."""
 from pathlib import Path
 
+from torchvision import transforms
 import polars as pl
 from sklearn.model_selection import train_test_split
 import torch
+from torch.utils.data import DataLoader, Dataset
+from PIL import Image
 
-# Nome da coluna-alvo definido uma única vez: o split é estratificado por ela
-# e não há parâmetro para trocá-la por engano (ex.: "dx_type").
+# Nome da coluna-alvo
 COLUNA_ALVO = "dx"
 COLUNA_GRUPO = "lesion_id"
 N_IMAGENS_UNICAS = 10_015
@@ -46,7 +48,9 @@ def extrair_metadados(dataset):
     def concatenar_splits(dfs: dict[str, pl.DataFrame]) -> pl.DataFrame:
         """Junta os splits num único DataFrame, preservando o índice original e a origem de cada linha."""
         partes = [
-            df.with_row_index("idx_original").with_columns(pl.lit(nome).alias("split_original"))
+            df
+            .with_row_index("idx_original")
+            .with_columns(pl.lit(nome).alias("split_original"))
             for nome, df in dfs.items()
         ]
         return pl.concat(partes, how="vertical_relaxed")
@@ -62,12 +66,13 @@ def deduplicar_por_imagem(df: pl.DataFrame) -> pl.DataFrame:
     para que o keep="first" não escolha entre valores divergentes em silêncio.
     """
     divergentes = (
-        df.group_by("image_id")
-          .agg(
-              pl.col(COLUNA_ALVO).n_unique().alias("n_alvo"),
-              pl.col(COLUNA_GRUPO).n_unique().alias("n_grupo"),
-          )
-          .filter((pl.col("n_alvo") > 1) | (pl.col("n_grupo") > 1))
+        df
+        .group_by("image_id")
+        .agg(
+            pl.col(COLUNA_ALVO).n_unique().alias("n_alvo"),
+            pl.col(COLUNA_GRUPO).n_unique().alias("n_grupo"),
+        )
+        .filter((pl.col("n_alvo") > 1) | (pl.col("n_grupo") > 1))
     )
     assert divergentes.height == 0, (
         f"{divergentes.height} image_id com {COLUNA_ALVO} ou {COLUNA_GRUPO} divergentes, "
@@ -92,16 +97,18 @@ def montar_split_por_lesao(df: pl.DataFrame, proporcoes: dict[str, float], seed:
 
     # Cada lesão precisa ter uma única classe, senão a estratificação por lesão não faz sentido
     inconsistentes = (
-        df.group_by(COLUNA_GRUPO)
-          .agg(pl.col(COLUNA_ALVO).n_unique().alias("n_classes"))
-          .filter(pl.col("n_classes") > 1)
+        df
+        .group_by(COLUNA_GRUPO)
+        .agg(pl.col(COLUNA_ALVO).n_unique().alias("n_classes"))
+        .filter(pl.col("n_classes") > 1)
     )
     assert inconsistentes.height == 0, f"{inconsistentes.height} lesões com mais de uma classe"
 
     # Uma linha por lesão
     lesoes = (
-        df.unique(subset=COLUNA_GRUPO, keep="first", maintain_order=True)
-          .select(COLUNA_GRUPO, COLUNA_ALVO)
+        df
+        .unique(subset=COLUNA_GRUPO, keep="first", maintain_order=True)
+        .select(COLUNA_GRUPO, COLUNA_ALVO)
     )
     ids = lesoes[COLUNA_GRUPO].to_list()
     estratos = lesoes[COLUNA_ALVO].to_list()
@@ -261,3 +268,167 @@ def computar_pesos(df: pl.DataFrame, split: str = "train") -> torch.Tensor:
         assert abs(peso * contagem_por_classe[classe] - total / num_classes) < 1e-3, classe
 
     return pesos
+
+
+
+class Ham10000Dataset(Dataset):
+    """
+    Dataset PyTorch sobre as imagens do HAM10000 no Hugging Face, na ordem das linhas
+    de um DataFrame de split (colunas de COLUNAS_SPLIT, ex.: saída de carregar_split
+    filtrada por um split).
+
+    Cada linha aponta para a imagem pelo par (split_original, idx_original): o split do
+    CSV mistura linhas vindas de train/validation/test do HF, e idx_original só tem
+    sentido dentro do split de origem da própria linha.
+
+    Um único Dataset serve aos dois modelos; só o `transform` muda (224 para o ViT
+    pré-treinado, 128 para o ViT do zero).
+
+    __getitem__ devolve (imagem, rótulo): a imagem como o transform a deixar
+    (ex.: tensor float32 de shape (3, H, W)) e o rótulo como tensor long em 0..6,
+    derivado de COLUNA_ALVO via CLASSE_PARA_INDICE.
+    """
+
+    def __init__(self, hf, df: pl.DataFrame, transform=None):
+        """
+        Args:
+            hf: DatasetDict do Hugging Face (as imagens; só é lido item a item).
+            df: DataFrame Polars de UM split, com as colunas de COLUNAS_SPLIT.
+            transform: transforms da torchvision (use transforms.Compose; lambdas não
+                são serializáveis para os workers do DataLoader).
+        """
+        faltando = set(COLUNAS_SPLIT) - set(df.columns)
+        assert not faltando, f"Colunas ausentes no DataFrame: {faltando}"
+        assert df.height > 0, "DataFrame vazio"
+
+        self.hf = hf
+        self.transform = transform
+
+        # Listas simples: o DataFrame do Polars não fica guardado no Dataset
+        self.split_original = df["split_original"].to_list()
+        self.idx_original = df["idx_original"].to_list()
+        ids_csv = df["image_id"].to_list()
+        classes = df[COLUNA_ALVO].to_list()
+
+        # Rótulos: toda classe precisa estar em CLASSES (sem valor padrão que esconda erro)
+        desconhecidas = set(classes) - set(CLASSES)
+        assert not desconhecidas, f"Classes fora de CLASSES: {desconhecidas}"
+        self.labels = [CLASSE_PARA_INDICE[c] for c in classes]
+
+        # Alinhamento CSV x HF: lê só a coluna de texto image_id, uma vez por split de
+        # origem (list() materializa a coluna; no datasets 4.x ela é preguiçosa)
+        ids_por_split = {
+            origem: list(hf[origem]["image_id"]) for origem in set(self.split_original)
+        }
+        esperados = [
+            ids_por_split[origem][pos]
+            for origem, pos in zip(self.split_original, self.idx_original)
+        ]
+        divergentes = [i for i, (a, b) in enumerate(zip(esperados, ids_csv)) if a != b]
+        if divergentes:
+            i = divergentes[0]
+            raise AssertionError(
+                f"{len(divergentes)} linhas do CSV apontam para a imagem errada no HF. "
+                f"Primeira: linha {i} ({self.split_original[i]}[{self.idx_original[i]}]): "
+                f"esperado {ids_csv[i]}, no HF {esperados[i]}"
+            )
+
+    def __len__(self) -> int:
+        return len(self.idx_original)
+
+    def __getitem__(self, idx: int):
+        # Acessa uma única linha do HF: só esta imagem é decodificada
+        item = self.hf[self.split_original[idx]][self.idx_original[idx]]
+        image = item["image"]
+
+        # Tipo e modo são perguntas diferentes: primeiro garante PIL, depois RGB
+        if not isinstance(image, Image.Image):
+            image = Image.fromarray(image)
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return image, torch.tensor(self.labels[idx], dtype=torch.long)
+
+
+
+def montar_transforms(tamanho: int, media, desvio, treino: bool) -> transforms.Compose:
+    """
+    Monta o pipeline: resize -> augmentation (só se treino=True) -> tensor -> normalização.
+
+    Args:
+        tamanho: tamanho final da imagem (quadrada) após o resize. 224 para o pré-treinado e 128 para o do zero.
+        media: média por canal (RGB) para normalização.
+        desvio: desvio padrão por canal (RGB) para normalização.
+        treino: se True, aplica data augmentation; se False, só o determinístico.
+
+    Returns:
+        transforms.Compose que recebe uma imagem PIL RGB e devolve um tensor float32 (3, tamanho, tamanho).
+    """
+
+    passos = [transforms.Resize((tamanho, tamanho))]
+
+    # Justificativa para os parâmetros de data augmentation:
+    # - RandomHorizontalFlip e RandomVerticalFlip: Imagens dermatoscópicas tomadas de lesões de
+    #     pele não possuem uma orientação espacial intrínseca (ao contrário de fotos normais do dia
+    #     a dia, onde há "céu acima" e "chão abaixo"). Girar ou espelhar a lesão não altera a lesão
+    #     nem o diagnóstico médico.
+    # - RandomAffine com degrees=180: Permite rotações aleatórias de até 180 graus, o que é útil
+    #     para aumentar a diversidade do conjunto de treinamento, já que a orientação da lesão não é
+    #     relevante para o diagnóstico.
+
+    if treino:
+        passos += [
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomVerticalFlip(p=0.5),
+            transforms.RandomAffine(
+                degrees=180,
+                translate=(0.05, 0.05),
+                scale=(0.95, 1.05),
+                fill=(210, 160, 140) # Preencher o fundo com a cor média aproximada da pele no dataset: RGB (210, 160, 140)
+            )
+        ]
+
+
+    passos += [transforms.ToTensor(), transforms.Normalize(media, desvio)]
+
+    return transforms.Compose(passos)
+
+
+def preparar_dataloaders(
+    hf,
+    df_split: pl.DataFrame,
+    tamanho: int,
+    media,
+    desvio,
+    batch_size: int = 32,
+    num_workers: int = 2,
+    aumentar_treino: bool = True,
+) -> dict[str, DataLoader]:
+    """
+    Monta {"train", "validation", "test"} -> DataLoader a partir do split versionado.
+    Um mesmo df_split serve aos dois modelos; só tamanho/normalização mudam.
+    Augmentation e shuffle só no treino: em validação/teste a avaliação precisa ser
+    determinística e comparável entre execuções.
+    """
+    transform_treino = montar_transforms(tamanho, media, desvio, treino=aumentar_treino)
+    transform_avaliacao = montar_transforms(tamanho, media, desvio, treino=False)
+
+    dataloaders = {}
+    for split in ORDEM_SPLITS:
+        df_parte = df_split.filter(pl.col("split") == split)
+        eh_treino = split == "train"
+        dataset = Ham10000Dataset(
+            hf, df_parte, transform=transform_treino if eh_treino else transform_avaliacao
+        )
+        dataloaders[split] = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=eh_treino,
+            num_workers=num_workers,
+            pin_memory=torch.cuda.is_available(),
+            persistent_workers=num_workers > 0,  # não recria os workers a cada época
+        )
+    return dataloaders

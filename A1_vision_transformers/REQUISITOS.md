@@ -34,8 +34,13 @@ attention weights: o que o modelo aprende a ponderar no domínio.
   splits, deduplicar por `image_id` e refazer o split agrupado por `lesion_id`.
 - **Modelos (exigidos pela rubrica):**
   - **ViT do zero:** implementação própria em PyTorch, treinada do zero no HAM10000.
-  - **ViT pré-treinado:** checkpoint do Hugging Face `transformers`, com head
-    substituído e fine-tuning no HAM10000.
+    Entrada 128×128, patch 16 (decisão do aluno) → grid 8×8 = 64 tokens + CLS.
+    Profundidade, heads e hidden a definir (Fase 3).
+  - **ViT pré-treinado:** `google/vit-base-patch16-224` (decisão do aluno), com head
+    substituído (1000 → 7 classes) e fine-tuning no HAM10000. Entrada 224×224,
+    normalização mean = std = [0.5, 0.5, 0.5] (do `preprocessor_config.json`),
+    patch 16 → grid 14×14 = 196 tokens + CLS, 12 camadas × 12 heads, hidden 768
+    (~86M parâmetros).
 - **Framework:** PyTorch (módulos próprios) + Hugging Face `transformers` (ViT
   pré-treinado); Polars para tabelas; scikit-learn para métricas
 - **Ambiente:** Google Colab com GPU T4 (exigência do professor). O aluno desenvolve
