@@ -14,27 +14,31 @@ módulos, `requirements.txt` e o notebook estão vazios.
 - [x] `git init` na raiz `Deep-Learning-Visao-Computacional/`, `.gitignore` (dados, checkpoints, outputs pesados), primeiro commit, repositório público — https://github.com/anacaetano02/Deep-Learning-Visao-Computacional
 - [ ] Notebook: célula de setup (clone local **ou** Drive, `sys.path` para `A1_vision_transformers/`, checagem de GPU T4) — R7
   - [x] Clone (sparse, só `A1_vision_transformers/`), `sys.path`, import do `src` e GPU T4 confirmados no Colab
-  - [x] Autoreload ligado
-  - [ ] Mover a célula de `git pull` para **depois** do clone (hoje ela usa `REPO_DIR` antes de ele existir)
+  - [x] ~~Autoreload~~ não funciona no Colab (Python 3.13 + IPython antigo: `No module named 'imp'`) → substituído por `importlib.reload` dos módulos `src.*` (célula após o clone; reexecutar os imports depois)
+  - [x] Mover a célula de `git pull` para **depois** do clone (hoje ela usa `REPO_DIR` antes de ele existir)
   - [ ] Testar o modo `SALVAR_NO_DRIVE = True`
-  - [ ] Commit + push do notebook
+  - [x] Commit + push do notebook
 - [ ] `requirements.txt` com as versões usadas — R7
 - [ ] Testar o setup num runtime **limpo** do Colab
 
 **Pronto quando:** o notebook clona o repo e importa `src` num Colab novo.
 
 ## Fase 1 — Dados (26–27/09) — destrava tudo
-- [ ] `data.py` → `extrair_metadados` (3 splits empilhados + `split_original`)
-- [ ] Contagem direta: total de linhas, `image_id` únicos, `lesion_id` únicos
-- [ ] Checar se cópias do mesmo `image_id` têm o mesmo `dx`
-- [ ] `deduplicar_por_imagem`
-- [ ] `montar_split_por_lesao` (agrupado por `lesion_id`, estratificado por `dx`, seed fixa)
-- [ ] `checar_vazamento(df, coluna)` → `assert` de zero nos pares, por `image_id` e por `lesion_id`
-- [ ] Salvar o split em CSV versionado no Git
-- [ ] Guardar as tabelas de vazamento "antes" (split do HF) em `outputs/` — relatório
+- [x] `data.py` → `extrair_metadados` (3 splits empilhados + `split_original` + `idx_original`)
+- [x] Contagem direta no notebook: 13.354 linhas, 10.015 `image_id`, 7.470 `lesion_id` (iguais antes/depois), 3.339 duplicatas removidas
+- [x] Checar se cópias do mesmo `image_id` têm o mesmo `dx` (e o mesmo `lesion_id`), antes de deduplicar
+- [x] `deduplicar_por_imagem`
+- [x] `montar_split_por_lesao` (agrupado por `lesion_id`, estratificado por `dx`, seed fixa, asserts de nulos/altura)
+- [x] `checar_vazamento(df, coluna)` + `validar_split` → `assert` de zero nos pares, por `image_id` e por `lesion_id` ("Split OK" no Colab)
+- [x] Fixar `revision=` no `load_dataset` (`bdd59e10…`, último commit do dataset em 25/01/2023)
+- [ ] Salvar o split em CSV versionado no Git — 🟡 gerado no Colab (disco temporário); falta baixar, commitar em `A1_vision_transformers/split_lesoes.csv` e ver "Split versionado confere com o recalculado"
+- [ ] Guardar as tabelas de vazamento "antes" (split do HF) — 🟡 geradas e conferidas (84,47/79,77/16,26 e 91,17/88,09/30,04); falta persistir (Drive/download, de preferência em `DIR_REPORT_ASSETS`)
+- [x] Tabela `dx × split` com nº de imagens e de lesões (antes e depois) — ajustar exibição: colunas `n_lesoes_*` cortadas pelo display do Polars
+- [ ] Mapeamento fixo de rótulos (7 classes em ordem definida → índice)
 - [ ] `calcular_pesos_classes` (só no treino)
-- [ ] `HAM10000Dataset` + `montar_transforms` + `preparar_dataloaders`
-- [ ] `/revisar A1_vision_transformers/src/data.py`
+- [ ] `HAM10000Dataset` (busca por `split_original` + `idx_original`, confere `image_id`) + `montar_transforms` + `preparar_dataloaders`
+- [ ] Teste de sanidade com 1 batch (shape, dtype, faixa de valores, rótulos)
+- [x] `/revisar A1_vision_transformers/src/data.py` (2 revisões; revisar de novo com Dataset/DataLoaders)
 
 **Pronto quando:** existem DataLoaders de treino/val/teste sem vazamento, e o CSV do split está no Git.
 
