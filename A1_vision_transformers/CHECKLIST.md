@@ -18,7 +18,7 @@ módulos, `requirements.txt` e o notebook estão vazios.
   - [x] Mover a célula de `git pull` para **depois** do clone (hoje ela usa `REPO_DIR` antes de ele existir)
   - [ ] Testar o modo `SALVAR_NO_DRIVE = True`
   - [x] Commit + push do notebook
-- [ ] `requirements.txt` com as versões usadas — R7
+- [x] `requirements.txt` com as versões do Colab T4 (torch sem o rótulo local `+cu128`) — R7
 - [ ] Testar o setup num runtime **limpo** do Colab
 
 **Pronto quando:** o notebook clona o repo e importa `src` num Colab novo.
@@ -33,12 +33,12 @@ módulos, `requirements.txt` e o notebook estão vazios.
 - [x] Fixar `revision=` no `load_dataset` (`bdd59e10…`, último commit do dataset em 25/01/2023)
 - [x] Split em CSV versionado no Git (`split_lesoes.csv`, commit 4d9fad1) — no Colab: "Split versionado confere com o recalculado"
 - [ ] Guardar as tabelas de vazamento "antes" (split do HF) — 🟡 geradas e conferidas (84,47/79,77/16,26 e 91,17/88,09/30,04); falta persistir (Drive/download, de preferência em `DIR_REPORT_ASSETS`)
-- [x] Tabela `dx × split` com nº de imagens e de lesões (antes e depois) — ajustar exibição: colunas `n_lesoes_*` cortadas pelo display do Polars
+- [x] Tabela `dx × split` com nº de imagens e de lesões (antes e depois), exibida sem cortar colunas
 - [x] Mapeamento fixo de rótulos (`CLASSES` + `CLASSE_PARA_INDICE`/`INDICE_PARA_CLASSE`, nomes completos do `dx`)
 - [x] `computar_pesos` (só no treino, por imagem, "balanced"; confere com `compute_class_weight` do sklearn)
-- [ ] `HAM10000Dataset` (busca por `split_original` + `idx_original`, confere `image_id`) + `montar_transforms` + `preparar_dataloaders`
-- [ ] Teste de sanidade com 1 batch (shape, dtype, faixa de valores, rótulos)
-- [x] `/revisar A1_vision_transformers/src/data.py` (2 revisões; revisar de novo com Dataset/DataLoaders)
+- [x] `Ham10000Dataset` (busca por `split_original` + `idx_original`, confere `image_id`) + `montar_transforms` (augmentation D4: flips + rotações de 90°, sem fill) + `preparar_dataloaders`
+- [x] Teste de sanidade com 1 batch de treino e validação (shape, dtype, faixa, valores negativos, rótulos) + figuras em `report_assets`
+- [x] `/revisar` do `data.py` e do notebook com Dataset/DataLoaders
 
 **Pronto quando:** existem DataLoaders de treino/val/teste sem vazamento, e o CSV do split está no Git.
 

@@ -85,11 +85,11 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 |----|-----------|--------|------------|
 | R1 | Usar dataset público, rotulado, de classificação de imagens, com ≥ 2 classes, em domínio real (saúde/varejo/indústria/satélite) | ✅ HAM10000 (`marmal88/skin_cancer`, revisão fixa), deduplicado e com split por lesão validado | src/data.py (carregar, deduplicar, split); relatório (justificativa) |
 | R2 | Gerar métricas de avaliação dos modelos | ⬜ pendente | src/evaluation.py |
-| R3 | Gerar visualizações (dados, curvas de treino, resultados) | ⬜ pendente | src/eda.py (dados), src/evaluation.py (curvas, matriz de confusão) |
+| R3 | Gerar visualizações (dados, curvas de treino, resultados) | 🟡 dados: tabelas `dx × split` e figuras de batch; faltam curvas e resultados | src/eda.py (dados), src/evaluation.py (curvas, matriz de confusão) |
 | R4 | Justificar por escrito as decisões de arquitetura: por que essa arquitetura para esse domínio | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
 | R5 | Justificar por escrito as decisões de hiperparâmetros: por que esses valores | ⬜ pendente | src/training.py (tabela de experimentos); A1_vision_transformers.ipynb (markdown); relatório |
 | R6 | Notebook nomeado `A1_vision_transformers.ipynb` | ✅ | A1_vision_transformers.ipynb |
-| R7 | Notebook roda de ponta a ponta no Google Colab com GPU T4 | ⬜ pendente | A1_vision_transformers.ipynb (setup: clone, sys.path), requirements.txt |
+| R7 | Notebook roda de ponta a ponta no Google Colab com GPU T4 | 🟡 Fases 0–1 rodam sem erro na T4 e requirements preenchido; falta runtime limpo e o restante do notebook | A1_vision_transformers.ipynb (setup: clone, sys.path), requirements.txt |
 | R8 | Início do notebook informa o tempo estimado de execução | ⬜ pendente | A1_vision_transformers.ipynb (célula inicial) |
 | R9 | Início do notebook informa o uso de memória | ⬜ pendente | A1_vision_transformers.ipynb (célula inicial), src/utils.py |
 | R10 | Seção da A1 no relatório técnico em PDF: definição do problema, justificativas técnicas, métricas e análise crítica | ⬜ pendente | nome_sobrenome_deep-learning-and-vision_computer-vision.pdf |

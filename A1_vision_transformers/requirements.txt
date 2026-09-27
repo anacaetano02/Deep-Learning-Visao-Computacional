@@ -1,0 +1,14 @@
+# Versões lidas no runtime do Colab (GPU T4) em 27/09/2026, célula de versões do notebook.
+# torch/torchvision sem o rótulo local (+cu128): pela PEP 440, "torch==2.11.0" é satisfeito
+# pela build 2.11.0+cu128 do Colab (nada é reinstalado) e continua instalável via PyPI.
+# Build no Colab: torch 2.11.0+cu128, torchvision 0.26.0+cu128.
+torch==2.11.0
+torchvision==0.26.0
+transformers==5.16.1
+datasets==4.8.5
+polars==1.35.2
+pandas==2.2.3
+pyarrow==23.0.1
+scikit-learn==1.6.1
+pillow==11.3.0
+matplotlib==3.10.0

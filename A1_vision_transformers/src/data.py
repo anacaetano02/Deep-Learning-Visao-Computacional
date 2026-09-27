@@ -358,6 +358,17 @@ def montar_transforms(tamanho: int, media, desvio, treino: bool) -> transforms.C
     """
     Monta o pipeline: resize -> augmentation (só se treino=True) -> tensor -> normalização.
 
+    Augmentation = as 8 simetrias do quadrado (grupo diedral D4): flip horizontal, flip
+    vertical e rotação sorteada entre 0/90/180/270 graus. Lesões dermatoscópicas não têm
+    orientação canônica, então essas transformações não mudam o diagnóstico. Como o resize
+    já deixa a imagem quadrada, rotações múltiplas de 90 graus são exatas: nenhum pixel é
+    inventado, nenhum canto precisa de preenchimento e a textura (rede pigmentar, glóbulos)
+    não é reamostrada.
+
+    Rotação livre foi descartada: as figuras de batch mostraram cantos preenchidos com uma
+    cor fixa em quase todas as imagens de treino, um padrão que só existe no treino e que o
+    modelo poderia usar como atalho; além disso, a interpolação reamostra a textura.
+
     Args:
         tamanho: tamanho final da imagem (quadrada) após o resize. 224 para o pré-treinado e 128 para o do zero.
         media: média por canal (RGB) para normalização.
@@ -367,30 +378,18 @@ def montar_transforms(tamanho: int, media, desvio, treino: bool) -> transforms.C
     Returns:
         transforms.Compose que recebe uma imagem PIL RGB e devolve um tensor float32 (3, tamanho, tamanho).
     """
-
+    # Resize direto para quadrado (600x450 -> t x t): igual ao ViTImageProcessor do checkpoint.
     passos = [transforms.Resize((tamanho, tamanho))]
-
-    # Justificativa para os parâmetros de data augmentation:
-    # - RandomHorizontalFlip e RandomVerticalFlip: Imagens dermatoscópicas tomadas de lesões de
-    #     pele não possuem uma orientação espacial intrínseca (ao contrário de fotos normais do dia
-    #     a dia, onde há "céu acima" e "chão abaixo"). Girar ou espelhar a lesão não altera a lesão
-    #     nem o diagnóstico médico.
-    # - RandomAffine com degrees=180: Permite rotações aleatórias de até 180 graus, o que é útil
-    #     para aumentar a diversidade do conjunto de treinamento, já que a orientação da lesão não é
-    #     relevante para o diagnóstico.
 
     if treino:
         passos += [
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomVerticalFlip(p=0.5),
-            transforms.RandomAffine(
-                degrees=180,
-                translate=(0.05, 0.05),
-                scale=(0.95, 1.05),
-                fill=(210, 160, 140) # Preencher o fundo com a cor média aproximada da pele no dataset: RGB (210, 160, 140)
-            )
+            # Ângulo fixo em cada opção -> rotação exata em imagem quadrada (sem fill)
+            transforms.RandomChoice(
+                [transforms.RandomRotation((angulo, angulo)) for angulo in (0, 90, 180, 270)]
+            ),
         ]
-
 
     passos += [transforms.ToTensor(), transforms.Normalize(media, desvio)]
 

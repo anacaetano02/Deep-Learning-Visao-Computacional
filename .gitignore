@@ -39,3 +39,6 @@ wandb/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Notas pessoais para o relatório (não versionar)
+relatorio.md
