@@ -9,11 +9,7 @@ from sklearn.model_selection import train_test_split
 COLUNA_ALVO = "dx"
 COLUNA_GRUPO = "lesion_id"
 N_IMAGENS_UNICAS = 10_015
-
-# data.py fica em A1_vision_transformers/src/, então o projeto é o diretório
-# acima. Não depende do diretório atual (no Colab, /content).
-PROJECT_DIR = Path(__file__).resolve().parents[1]
-CAMINHO_SPLIT = PROJECT_DIR / "split_lesoes.csv"
+ORDEM_SPLITS = ["train", "validation", "test"]
 
 COLUNAS_SPLIT = [
     "image_id", COLUNA_GRUPO, COLUNA_ALVO,
@@ -141,11 +137,19 @@ def montar_split_por_lesao(df: pl.DataFrame, proporcoes: dict[str, float], seed:
     return df_com_split
 
 
-def checar_vazamento(df: pl.DataFrame, coluna: str) -> dict[str, set]:
-    """Para cada par de splits, retorna os valores de `coluna` que aparecem nos dois."""
+def checar_vazamento(df: pl.DataFrame, coluna: str, coluna_split: str = "split") -> dict[str, set]:
+    """
+    Para cada par de splits, retorna os valores de `coluna` que aparecem nos dois.
+    coluna_split="split_original" gera o "antes"; o padrão "split" gera o "depois".
+    """
+    presentes = set(df[coluna_split].unique().to_list())
+    faltando_na_ordem = presentes - set(ORDEM_SPLITS)
+    assert not faltando_na_ordem, f"Splits fora de ORDEM_SPLITS: {faltando_na_ordem}"
+
+    # Ordem fixa (train -> validation -> test): em cada par "a_vs_b", b é o split avaliado
     valores_por_split = {
-        split: set(df.filter(pl.col("split") == split)[coluna])
-        for split in sorted(df["split"].unique().to_list())
+        split: set(df.filter(pl.col(coluna_split) == split)[coluna])
+        for split in ORDEM_SPLITS if split in presentes
     }
 
     splits = list(valores_por_split)
@@ -180,7 +184,7 @@ def validar_split(df: pl.DataFrame, colunas=("image_id", COLUNA_GRUPO)) -> None:
     print(f"Split OK: zero vazamento de {', '.join(colunas)} entre os pares de splits.")
 
 
-def salvar_split(df: pl.DataFrame, caminho: str | Path = CAMINHO_SPLIT) -> None:
+def salvar_split(df: pl.DataFrame, caminho: str | Path) -> None:
     """Salva só as colunas necessárias para reconstruir o split, em CSV versionável."""
     caminho = Path(caminho)
     caminho.parent.mkdir(parents=True, exist_ok=True)
@@ -188,7 +192,7 @@ def salvar_split(df: pl.DataFrame, caminho: str | Path = CAMINHO_SPLIT) -> None:
     print(f"Split salvo em {caminho} ({df.height} linhas)")
 
 
-def carregar_split(caminho: str | Path = CAMINHO_SPLIT) -> pl.DataFrame:
+def carregar_split(caminho: str | Path) -> pl.DataFrame:
     """Lê o split salvo por `salvar_split`, com os tipos corretos, e valida as colunas."""
     caminho = Path(caminho)
     if not caminho.exists():
