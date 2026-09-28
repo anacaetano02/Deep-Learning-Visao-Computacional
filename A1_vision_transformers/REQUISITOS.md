@@ -68,7 +68,7 @@ attention weights: o que o modelo aprende a ponderar no domínio.
       └── utils.py        # só o que é transversal: log, caminhos, salvar figura
   ```
 - **Registro de experimentos (decisão do aluno):** `registrar_experimento` /
-  `exportar_experimentos` reaproveitados do projeto 2, com persistência em CSV/JSON
+  `carregar_experimentos` (adaptados do projeto 2), com persistência em CSV/JSON
   no Drive. Sem MLflow nesta entrega.
 - **Métrica(s) exigida(s):** nem o enunciado nem a rubrica especificam. Escolha do
   aluno: F1 macro como principal (dataset desbalanceado, `nv` ≈ 67%), mais F1

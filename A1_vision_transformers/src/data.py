@@ -12,7 +12,9 @@ from PIL import Image
 COLUNA_ALVO = "dx"
 COLUNA_GRUPO = "lesion_id"
 N_IMAGENS_UNICAS = 10_015
-ORDEM_SPLITS = ["train", "validation", "test"]
+# Nomes dos splits: use as constantes em vez de strings soltas (ex.: "val" x "validation")
+SPLIT_TREINO, SPLIT_VALIDACAO, SPLIT_TESTE = "train", "validation", "test"
+ORDEM_SPLITS = [SPLIT_TREINO, SPLIT_VALIDACAO, SPLIT_TESTE]
 
 COLUNAS_SPLIT = [
     "image_id", COLUNA_GRUPO, COLUNA_ALVO,
@@ -405,20 +407,26 @@ def preparar_dataloaders(
     batch_size: int = 32,
     num_workers: int = 2,
     aumentar_treino: bool = True,
+    seed: int | None = None,
 ) -> dict[str, DataLoader]:
     """
     Monta {"train", "validation", "test"} -> DataLoader a partir do split versionado.
     Um mesmo df_split serve aos dois modelos; só tamanho/normalização mudam.
     Augmentation e shuffle só no treino: em validação/teste a avaliação precisa ser
     determinística e comparável entre execuções.
+
+    seed: se dado, o shuffle do treino usa um gerador próprio com essa semente. Sem ele,
+    a ordem depende do RNG global, que muda com qualquer célula que sorteie algo antes
+    (criar um modelo, uma figura), e "Restart & Run All" daria outra ordem.
     """
+    gerador = torch.Generator().manual_seed(seed) if seed is not None else None
     transform_treino = montar_transforms(tamanho, media, desvio, treino=aumentar_treino)
     transform_avaliacao = montar_transforms(tamanho, media, desvio, treino=False)
 
     dataloaders = {}
     for split in ORDEM_SPLITS:
         df_parte = df_split.filter(pl.col("split") == split)
-        eh_treino = split == "train"
+        eh_treino = split == SPLIT_TREINO
         dataset = Ham10000Dataset(
             hf, df_parte, transform=transform_treino if eh_treino else transform_avaliacao
         )
@@ -426,6 +434,7 @@ def preparar_dataloaders(
             dataset,
             batch_size=batch_size,
             shuffle=eh_treino,
+            generator=gerador if eh_treino else None,
             num_workers=num_workers,
             pin_memory=torch.cuda.is_available(),
             persistent_workers=num_workers > 0,  # não recria os workers a cada época
