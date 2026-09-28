@@ -35,7 +35,8 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 - **Modelos (exigidos pela rubrica):**
   - **ViT do zero:** implementação própria em PyTorch, treinada do zero no HAM10000.
     Entrada 128×128, patch 16 (decisão do aluno) → grid 8×8 = 64 tokens + CLS.
-    Profundidade, heads e hidden a definir (Fase 3).
+    Configuração base (Fase 3): d=192, h=3 (d_k=64), 6 camadas, MLP 768, dropout 0,1, PE aprendível
+    (senoidal como opção) → 2,83M parâmetros. Valores finais a confirmar no piloto da Fase 4.
   - **ViT pré-treinado:** `google/vit-base-patch16-224` (decisão do aluno), com head
     substituído (1000 → 7 classes) e fine-tuning no HAM10000. Entrada 224×224,
     normalização mean = std = [0.5, 0.5, 0.5] (do `preprocessor_config.json`),
@@ -49,8 +50,7 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 - **Organização do código (decisão do aluno):** os módulos auxiliares ficam em `src/`
   e são versionados no Git. O notebook principal clona o repositório no Colab e
   oferece dois destinos, à escolha do professor: o disco local do runtime ou o Google
-  Drive dele. A pasta hoje se chama `scr/`; o plano é renomeá-la para `src/` antes
-  do primeiro commit. A estrutura segue a do projeto 2 (CNN), com EDA, avaliação e
+  Drive dele. A estrutura segue a do projeto 2 (CNN), com EDA, avaliação e
   attention em módulos próprios:
   ```
   proj_1_vit/
@@ -97,15 +97,15 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 ### Implementação do zero (rubrica, seções 2 e 3)
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R11 | Scaled dot-product attention implementada do zero como módulo PyTorch | ⬜ pendente | src/transformer.py |
-| R12 | Multi-head attention do zero, com projeções independentes por head e concatenação das saídas | ⬜ pendente | src/transformer.py |
-| R13 | Módulos de attention testáveis (testes demonstrados: shapes, pesos somando 1, máscara etc.) | ⬜ pendente | A1_vision_transformers.ipynb (seção de testes) |
-| R14 | `TransformerEncoderBlock` completo: feedforward de duas camadas, LayerNorm e residual connections | ⬜ pendente | src/transformer.py |
-| R15 | Patch embedding implementado | ⬜ pendente | src/transformer.py |
-| R16 | CLS token aprendível | ⬜ pendente | src/transformer.py |
-| R17 | Positional encoding aplicado à sequência de tokens do ViT | ⬜ pendente | src/transformer.py |
-| R18 | Explicar por escrito por que attention sem positional encoding não preserva informação posicional | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
-| R19 | ViT completo montado a partir do `TransformerEncoderBlock`: recebe uma imagem e retorna logits | ⬜ pendente | src/transformer.py |
+| R11 | Scaled dot-product attention implementada do zero como módulo PyTorch | ✅ `ScaledDotProductAttention`; testes no notebook | src/transformer.py |
+| R12 | Multi-head attention do zero, com projeções independentes por head e concatenação das saídas | ✅ `CabecaAtencao` em `ModuleList` + concat + `W_O`; teste de equivalência (texto no markdown ainda a escrever) | src/transformer.py |
+| R13 | Módulos de attention testáveis (testes demonstrados: shapes, pesos somando 1, máscara etc.) | ✅ seção de testes executada no Colab T4 | A1_vision_transformers.ipynb (seção de testes) |
+| R14 | `TransformerEncoderBlock` completo: feedforward de duas camadas, LayerNorm e residual connections | ✅ pré-norm | src/transformer.py |
+| R15 | Patch embedding implementado | ✅ `PatchEmbedding` (teste Conv2d == unfold + Linear) | src/transformer.py |
+| R16 | CLS token aprendível | ✅ | src/transformer.py |
+| R17 | Positional encoding aplicado à sequência de tokens do ViT | ✅ aprendível (padrão) ou senoidal | src/transformer.py |
+| R18 | Explicar por escrito por que attention sem positional encoding não preserva informação posicional | 🟡 evidência pronta (testes + figura `r18_patches_embaralhados.png`); falta o texto | A1_vision_transformers.ipynb (markdown); relatório |
+| R19 | ViT completo montado a partir do `TransformerEncoderBlock`: recebe uma imagem e retorna logits | ✅ batch real (64,3,128,128) → (64,7); overfit de 16 imagens OK | src/transformer.py |
 
 ### Treino e comparação (rubrica, seção 3)
 | ID | Requisito | Status | Arquivo(s) |
@@ -136,7 +136,7 @@ Nenhum definido no enunciado nem na rubrica. Itens do guia pessoal
 ([docs/guia_projeto_vit.md](docs/guia_projeto_vit.md)), que não são exigência do professor:
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| B1 | EDA do dataset (desbalanceamento, metadados, duplicatas por lesão) | 🟡 em andamento | src/eda.py (hoje em scr/data.py, a migrar) |
+| B1 | EDA do dataset (desbalanceamento, metadados, duplicatas por lesão) | 🟡 em andamento | src/eda.py |
 | B2 | Comparar estratégias de balanceamento (class weights, sampler, focal loss) | ⬜ pendente | src/training.py (pesos, sampler, FocalLoss) |
 | B3 | Comparar attention entre heads/camadas ou usar attention rollout | ⬜ pendente | src/attention.py |
 | B4 | Comparar attention em casos de acerto × erro | ⬜ pendente | src/attention.py, src/evaluation.py (exemplos de erro) |

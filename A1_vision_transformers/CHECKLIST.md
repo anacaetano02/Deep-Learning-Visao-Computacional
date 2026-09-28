@@ -4,7 +4,8 @@ Ordem pensada para o **caminho crítico**: cada fase destrava a seguinte. Os IDs
 são os do [REQUISITOS.md](REQUISITOS.md). Meta: fechar a A1 até **30/09** para sobrar
 01–05/10 para A2, A3, A4 e o relatório.
 
-Estado em 27/09: Fases 0 e 1 concluídas (runtime limpo + modo Drive no Colab T4). Próximo: Fase 3.
+Estado em 28/09: Fases 0, 1 e 3 concluídas (Fase 2 reduzida ao essencial). Próximo: Fase 4 (treino).
+Meta: A1 funcionalmente fechada até 30/09 à noite (A2, A3 e A4 ainda inteiras).
 
 ---
 
@@ -56,9 +57,9 @@ Estado em 27/09: Fases 0 e 1 concluídas (runtime limpo + modo Drive no Colab T4
 - [x] CLS token aprendível — R16
 - [x] Positional encoding: `tipo_pe="aprendivel"` (padrão) ou `"senoidal"` (buffer) — R17
 - [x] ViT completo (128 px, 64+1 tokens, d=192, h=3, 6 camadas, 2,83M parâmetros): imagem → logits + pesos por camada — R19
-- [ ] Notebook: seção de testes (R11–R19, R18 com patches embaralhados, overfit de 16 imagens) — 🟡 células criadas e validadas localmente; **falta rodar no Colab** e salvar as saídas — R13
-- [ ] Textos R12 e R18 nos markdowns da seção de testes (marcadores "A escrever")
-- [ ] `/revisar A1_vision_transformers/src/transformer.py`
+- [x] Notebook: seção de testes (R11–R19, R18 com patches embaralhados, overfit de 16 imagens: loss 1,899 → 0,036 em 81 passos) executada no Colab T4 — R13
+- [ ] Textos R12 e R18 nos markdowns da seção de testes (marcadores "A escrever") → movido para a Fase 7
+- [x] `/revisar` do `transformer.py` e do notebook
 
 **Pronto quando:** os testes passam e um batch real passa pelo modelo sem erro.
 
