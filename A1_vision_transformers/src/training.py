@@ -164,6 +164,13 @@ def _escrever_csv_atomico(df: pl.DataFrame, caminho: Path) -> None:
     os.replace(tmp, caminho)
 
 
+def _escrever_texto_atomico(texto: str, caminho: Path) -> None:
+    """Mesma ideia de _salvar_atomico, para texto (JSON)."""
+    tmp = caminho.with_name(caminho.name + ".tmp")
+    tmp.write_text(texto, encoding="utf-8")
+    os.replace(tmp, caminho)
+
+
 def _resolver_device(device) -> torch.device:
     """
     Aceita "cuda", "cuda:0", torch.device(...) ou None. O .to() recebe o
@@ -186,6 +193,11 @@ def _carregar_pesos_melhor(modelo: nn.Module, caminho_melhor: Path, device: torc
 # Treino
 # ---------------------------------------------------------------------------
 
+def _diferencas_config(salva: dict, atual: dict) -> dict:
+    """Chaves cuja config salva difere da atual: {chave: (salvo, atual)}."""
+    return {k: (salva.get(k), v) for k, v in atual.items() if salva.get(k) != v}
+
+
 def treinar_modelo(
     modelo: nn.Module,
     dataloaders: dict,
@@ -193,36 +205,51 @@ def treinar_modelo(
     nome_experimento: str,
     checkpoint_dir: str | Path,
     dir_resultados: str | Path,
-    epochs: int = 30,
-    lr: float = 3e-4,
-    weight_decay: float = 0.05,
+    *,
+    epochs: int,
+    lr: float,
+    weight_decay: float,
+    config_modelo: dict,
     frac_warmup: float = 0.1,
     paciencia_early_stopping: int = 7,
     min_delta: float = 0.0,
-    device=None,
-    forcar_do_zero: bool = False,
     clip_grad_norm_max: float = 1.0,
     criterio: nn.Module = None,
+    device=None,
+    forcar_do_zero: bool = False,
     max_passos: int | None = None,
+    dir_ultimo: str | Path | None = None,
 ) -> dict:
     """
     Treina 'modelo' escolhendo o melhor pela F1 macro de validação (não pela
     val_loss: a loss ponderada pode cair sem que as classes raras melhorem).
     Só conta como melhora um F1 maior que o melhor anterior + min_delta.
 
-    Checkpoints em checkpoint_dir/nome_experimento/ (gravação atômica):
-    * ultimo.pt: estado completo e a config, salvo a cada época, com a marca "concluido";
-    * melhor.pt: pesos da época de maior F1 macro.
-    Rodar de novo o mesmo experimento retoma do ultimo.pt; se ele estiver
-    marcado como concluído, não treina de novo. Retomar com uma config
-    diferente da salva é erro (mude o nome ou use forcar_do_zero=True).
+    epochs, lr, weight_decay e config_modelo são obrigatórios e só por nome:
+    os valores certos para o ViT do zero e para o fine-tuning são muito
+    diferentes (ex.: lr 3e-4 x 5e-5), e um padrão esquecido destruiria as
+    features do pré-treinado sem nenhum erro. config_modelo descreve a
+    arquitetura (ex.: {"img": 128, "d": 192, "dropout": 0.1, "tipo_pe": ...})
+    e entra na config conferida na retomada.
 
-    Ao retornar, `modelo` SEMPRE tem os pesos do melhor.pt e está em modo eval,
-    tanto depois de treinar quanto no caminho "já concluído".
+    Arquivos (gravação atômica):
+    * checkpoint_dir/<nome>/melhor.pt: pesos da época de maior F1 macro;
+    * checkpoint_dir/<nome>/concluido.json: marca de fim, com a config, o
+      melhor F1 e o histórico. Com ele e o melhor.pt, rodar de novo não treina:
+      carrega o melhor.pt (é o que a flag "pular treinos" usa; o ultimo.pt não
+      é necessário);
+    * (dir_ultimo ou checkpoint_dir)/<nome>/ultimo.pt: estado completo para
+      retomar depois de uma desconexão (modelo, otimizador, scheduler, scaler,
+      gerador do shuffle). Para o ViT-base ele tem ~1 GB; dir_ultimo permite
+      gravá-lo no disco local do Colab em vez do Drive (perde a retomada se o
+      runtime cair, mas não enche a cota do Drive).
+    Retomar ou pular com uma config diferente da salva é erro (mude o nome
+    ou use forcar_do_zero=True, que apaga a marca de concluído).
+
+    Ao retornar, `modelo` SEMPRE tem os pesos do melhor.pt e está em modo eval.
 
     max_passos: smoke test. Limita cada época de treino e de validação a N
-    batches; o nome do experimento precisa começar com "smoke_" para não
-    marcar como concluído (nem sobrescrever) o experimento real.
+    batches; o nome do experimento precisa começar com "smoke_".
 
     criterio: por padrão CrossEntropyLoss(weight=pesos_classe). Use o mesmo
     critério nos modelos que serão comparados. As losses por época são a média
@@ -242,11 +269,15 @@ def treinar_modelo(
             "marcar o experimento real como concluído"
         )
     loader_treino, loader_val = dataloaders[SPLIT_TREINO], dataloaders[SPLIT_VALIDACAO]
+    gerador = loader_treino.generator  # None se o DataLoader foi criado sem seed
 
     dir_exp = Path(checkpoint_dir) / nome_experimento
+    dir_exp_ultimo = Path(dir_ultimo or checkpoint_dir) / nome_experimento
     dir_exp.mkdir(parents=True, exist_ok=True)
-    caminho_ultimo = dir_exp / "ultimo.pt"
+    dir_exp_ultimo.mkdir(parents=True, exist_ok=True)
     caminho_melhor = dir_exp / "melhor.pt"
+    caminho_concluido = dir_exp / "concluido.json"
+    caminho_ultimo = dir_exp_ultimo / "ultimo.pt"
     caminho_historico = Path(dir_resultados) / "historico" / f"{nome_experimento}.csv"
 
     device = _resolver_device(device)
@@ -256,73 +287,93 @@ def treinar_modelo(
     pesos_classe = pesos_classe.to(device)
     criterio = criterio if criterio is not None else nn.CrossEntropyLoss(weight=pesos_classe)
     criterio = criterio.to(device)  # o weight da CE é buffer: vai junto para a GPU
-    otimizador = torch.optim.AdamW(grupos_weight_decay(modelo, weight_decay), lr=lr)
 
-    passos_por_epoca = len(loader_treino) if max_passos is None else min(max_passos, len(loader_treino))
-    passos_totais = epochs * passos_por_epoca
-    scheduler = scheduler_warmup_cosseno(otimizador, passos_totais, int(frac_warmup * passos_totais))
-    scaler = torch.amp.GradScaler(device.type) if usa_amp else None
-
-    # Tudo o que muda a trajetória do treino: salvo no checkpoint e conferido na retomada
+    # Tudo o que muda o experimento: gravado e conferido ao retomar ou pular.
+    # Inclui arquitetura, critério e pesos de classe: trocar dropout, tipo de PE ou
+    # a loss com o mesmo nome não daria erro no load_state_dict e misturaria dois treinos.
     config = {
         "epochs": epochs, "lr": lr, "weight_decay": weight_decay, "frac_warmup": frac_warmup,
         "paciencia_early_stopping": paciencia_early_stopping, "min_delta": min_delta,
         "clip_grad_norm_max": clip_grad_norm_max, "batch_size": loader_treino.batch_size,
         "max_passos": max_passos,
+        "modelo": dict(config_modelo),
+        "criterio": type(criterio).__name__,
+        "pesos_classe": [round(p, 6) for p in pesos_classe.tolist()],
     }
+
+    if forcar_do_zero:
+        caminho_concluido.unlink(missing_ok=True)
+    elif caminho_concluido.exists():
+        marca = json.loads(caminho_concluido.read_text(encoding="utf-8"))
+        diferencas = _diferencas_config(marca["config"], config)
+        if diferencas:
+            raise ValueError(
+                f"'{nome_experimento}' já foi concluído com outra config "
+                f"(chave: (salvo, atual)) {diferencas}. Mude nome_experimento ou use forcar_do_zero=True."
+            )
+        ckpt = _carregar_pesos_melhor(modelo, caminho_melhor, device)
+        print(f"'{nome_experimento}' já concluído: melhor.pt carregado (época {ckpt['epoca']}, "
+              f"F1 macro de validação={ckpt['val_f1_macro']:.4f}). "
+              f"Use forcar_do_zero=True para treinar de novo.")
+        return marca["historico"]
+
+    otimizador = torch.optim.AdamW(grupos_weight_decay(modelo, weight_decay), lr=lr)
+    passos_por_epoca = len(loader_treino) if max_passos is None else min(max_passos, len(loader_treino))
+    passos_totais = epochs * passos_por_epoca
+    scheduler = scheduler_warmup_cosseno(otimizador, passos_totais, int(frac_warmup * passos_totais))
+    scaler = torch.amp.GradScaler(device.type) if usa_amp else None
 
     historico = {
         "epoca": [], "train_loss": [], "val_loss": [], "val_f1_macro": [],
         "grad_norm": [], "batches_overflow": [], "lr": [], "segundos": [],
     }
     melhor_f1 = -1.0
+    epoca_melhor = 0
     epocas_sem_melhora = 0
     epoca_inicial = 1
 
     if caminho_ultimo.exists() and not forcar_do_zero:
         estado = torch.load(caminho_ultimo, map_location=device)
-        diferencas = {
-            k: (estado["config"].get(k), v) for k, v in config.items() if estado["config"].get(k) != v
-        }
+        diferencas = _diferencas_config(estado["config"], config)
         if diferencas:
             raise ValueError(
                 f"'{nome_experimento}' já tem checkpoint com outra config "
                 f"(chave: (salvo, atual)) {diferencas}. Mude nome_experimento ou use forcar_do_zero=True."
             )
-
-        if estado["concluido"]:
-            ckpt = _carregar_pesos_melhor(modelo, caminho_melhor, device)
-            print(f"'{nome_experimento}' já concluído: melhor.pt carregado (época {ckpt['epoca']}, "
-                  f"F1 macro de validação={ckpt['val_f1_macro']:.4f}). "
-                  f"Use forcar_do_zero=True para treinar de novo.")
-            return estado["historico"]
-
         modelo.load_state_dict(estado["modelo"])
         otimizador.load_state_dict(estado["otimizador"])
         scheduler.load_state_dict(estado["scheduler"])
         if scaler and estado.get("scaler"):
             scaler.load_state_dict(estado["scaler"])
+        if gerador is not None and estado.get("gerador") is not None:
+            # Mesma ordem de shuffle que o treino contínuo teria. A augmentation roda nos
+            # workers, com sementes próprias, e não é reproduzida exatamente.
+            gerador.set_state(estado["gerador"].cpu())
         historico = estado["historico"]
         melhor_f1 = estado["melhor_f1"]
+        epoca_melhor = estado["epoca_melhor"]
         epocas_sem_melhora = estado["epocas_sem_melhora"]
         epoca_inicial = estado["epoca"] + 1
+        if epocas_sem_melhora >= paciencia_early_stopping:
+            epoca_inicial = epochs + 1  # já tinha parado por early stopping: só finaliza
         print(f"Retomando '{nome_experimento}' da época {epoca_inicial}.")
 
     print(f"Treino de '{nome_experimento}' em {device} (AMP {'ativo' if usa_amp else 'inativo'}), "
           f"até {epochs} épocas, {passos_por_epoca} passos por época.")
 
-    def salvar_ultimo(epoca: int, concluido: bool) -> None:
+    def salvar_ultimo(epoca: int) -> None:
         _salvar_atomico(
             {
                 "modelo": modelo.state_dict(),
                 "otimizador": otimizador.state_dict(),
                 "scheduler": scheduler.state_dict(),
                 "scaler": scaler.state_dict() if scaler else None,
+                "gerador": gerador.get_state() if gerador is not None else None,
                 "historico": historico,
                 "melhor_f1": melhor_f1,
+                "epoca_melhor": epoca_melhor,
                 "epocas_sem_melhora": epocas_sem_melhora,
                 "epoca": epoca,
-                "concluido": concluido,
                 "config": config,
             },
             caminho_ultimo,
@@ -416,7 +467,6 @@ def treinar_modelo(
             average="macro", labels=list(range(len(CLASSES))), zero_division=0,
         ))
 
-        dt = time.time() - t0
         historico["epoca"].append(epoca)
         historico["train_loss"].append(train_loss)
         historico["val_loss"].append(val_loss)
@@ -424,17 +474,10 @@ def treinar_modelo(
         historico["grad_norm"].append(grad_norm_medio)
         historico["batches_overflow"].append(n_batches_overflow)
         historico["lr"].append(otimizador.param_groups[0]["lr"])
-        historico["segundos"].append(dt)
-
-        overflow_str = f" overflow={n_batches_overflow}batches" if n_batches_overflow else ""
-        print(
-            f"[{nome_experimento}] época {epoca}/{epochs} — "
-            f"train_loss={train_loss:.4f} val_loss={val_loss:.4f} val_f1_macro={val_f1:.4f} "
-            f"grad_norm={grad_norm_medio:.4f}{overflow_str} ({dt:.1f}s)"
-        )
 
         if val_f1 > melhor_f1 + min_delta:
             melhor_f1 = val_f1
+            epoca_melhor = epoca
             epocas_sem_melhora = 0
             _salvar_atomico(
                 {"modelo": modelo.state_dict(), "epoca": epoca, "val_f1_macro": melhor_f1, "config": config},
@@ -443,21 +486,33 @@ def treinar_modelo(
         else:
             epocas_sem_melhora += 1
 
-        parar = epocas_sem_melhora >= paciencia_early_stopping
-        # Estado completo a cada época (é o que permite retomar), marcado como
-        # concluído na última época ou no early stopping
-        salvar_ultimo(epoca, concluido=parar or epoca == epochs)
+        # "segundos" inclui a gravação dos checkpoints (no Drive ela não é desprezível)
+        historico["segundos"].append(time.time() - t0)
+        salvar_ultimo(epoca)  # estado completo a cada época: é o que permite retomar
         _escrever_csv_atomico(pl.DataFrame(historico), caminho_historico)
 
-        if parar:
+        overflow_str = f" overflow={n_batches_overflow}batches" if n_batches_overflow else ""
+        print(
+            f"[{nome_experimento}] época {epoca}/{epochs} — "
+            f"train_loss={train_loss:.4f} val_loss={val_loss:.4f} val_f1_macro={val_f1:.4f} "
+            f"grad_norm={grad_norm_medio:.4f}{overflow_str} ({historico['segundos'][-1]:.1f}s)"
+        )
+
+        if epocas_sem_melhora >= paciencia_early_stopping:
             print(f"Early stopping em '{nome_experimento}' na época {epoca} "
                   f"(sem melhora por {paciencia_early_stopping} épocas).")
             break
 
+    # Marca de concluído: fica ao lado do melhor.pt e basta para pular o treino depois
+    _escrever_texto_atomico(
+        json.dumps({"config": config, "melhor_f1": melhor_f1, "epoca_melhor": epoca_melhor,
+                    "historico": historico}, ensure_ascii=False, indent=1),
+        caminho_concluido,
+    )
     # O modelo em memória tem os pesos da ÚLTIMA época; a seleção foi pelo melhor F1
-    ckpt = _carregar_pesos_melhor(modelo, caminho_melhor, device)
+    _carregar_pesos_melhor(modelo, caminho_melhor, device)
     print(f"Treino de '{nome_experimento}' concluído. Melhor F1 macro={melhor_f1:.4f} "
-          f"(época {ckpt['epoca']}); modelo com os pesos de '{caminho_melhor}'.")
+          f"(época {epoca_melhor}); modelo com os pesos de '{caminho_melhor}'.")
     return historico
 
 
