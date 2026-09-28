@@ -4,22 +4,21 @@ Ordem pensada para o **caminho crítico**: cada fase destrava a seguinte. Os IDs
 são os do [REQUISITOS.md](REQUISITOS.md). Meta: fechar a A1 até **30/09** para sobrar
 01–05/10 para A2, A3, A4 e o relatório.
 
-Estado em 26/09: só `src/data.py` tem conteúdo (versão antiga, a refatorar). Demais
-módulos, `requirements.txt` e o notebook estão vazios.
+Estado em 27/09: Fases 0 e 1 concluídas (runtime limpo + modo Drive no Colab T4). Próximo: Fase 3.
 
 ---
 
 ## Fase 0 — Setup (26/09, ~1h)
 - [ ] Mandar ao professor as dúvidas da A1 + gerais + as bloqueantes da A2/A4 (uma mensagem só)
 - [x] `git init` na raiz `Deep-Learning-Visao-Computacional/`, `.gitignore` (dados, checkpoints, outputs pesados), primeiro commit, repositório público — https://github.com/anacaetano02/Deep-Learning-Visao-Computacional
-- [ ] Notebook: célula de setup (clone local **ou** Drive, `sys.path` para `A1_vision_transformers/`, checagem de GPU T4) — R7
+- [x] Notebook: célula de setup (clone local **ou** Drive, `sys.path` para `A1_vision_transformers/`, checagem de GPU T4) — R7
   - [x] Clone (sparse, só `A1_vision_transformers/`), `sys.path`, import do `src` e GPU T4 confirmados no Colab
   - [x] ~~Autoreload~~ não funciona no Colab (Python 3.13 + IPython antigo: `No module named 'imp'`) → substituído por `importlib.reload` dos módulos `src.*` (célula após o clone; reexecutar os imports depois)
   - [x] Mover a célula de `git pull` para **depois** do clone (hoje ela usa `REPO_DIR` antes de ele existir)
-  - [ ] Testar o modo `SALVAR_NO_DRIVE = True`
+  - [x] Testar o modo `SALVAR_NO_DRIVE = True` (Drive montado, artefatos + zip no Drive)
   - [x] Commit + push do notebook
 - [x] `requirements.txt` com as versões do Colab T4 (torch sem o rótulo local `+cu128`) — R7
-- [ ] Testar o setup num runtime **limpo** do Colab
+- [x] Testar o setup num runtime **limpo** do Colab (27/09, exec 1→12 sem erro)
 
 **Pronto quando:** o notebook clona o repo e importa `src` num Colab novo.
 
@@ -32,7 +31,7 @@ módulos, `requirements.txt` e o notebook estão vazios.
 - [x] `checar_vazamento(df, coluna)` + `validar_split` → `assert` de zero nos pares, por `image_id` e por `lesion_id` ("Split OK" no Colab)
 - [x] Fixar `revision=` no `load_dataset` (`bdd59e10…`, último commit do dataset em 25/01/2023)
 - [x] Split em CSV versionado no Git (`split_lesoes.csv`, commit 4d9fad1) — no Colab: "Split versionado confere com o recalculado"
-- [ ] Guardar as tabelas de vazamento "antes" (split do HF) — 🟡 geradas e conferidas (84,47/79,77/16,26 e 91,17/88,09/30,04); falta persistir (Drive/download, de preferência em `DIR_REPORT_ASSETS`)
+- [x] Tabelas de vazamento "antes" (84,47/79,77/16,26 e 91,17/88,09/30,04) salvas em `report_assets` no Drive
 - [x] Tabela `dx × split` com nº de imagens e de lesões (antes e depois), exibida sem cortar colunas
 - [x] Mapeamento fixo de rótulos (`CLASSES` + `CLASSE_PARA_INDICE`/`INDICE_PARA_CLASSE`, nomes completos do `dx`)
 - [x] `computar_pesos` (só no treino, por imagem, "balanced"; confere com `compute_class_weight` do sklearn)
@@ -44,44 +43,51 @@ módulos, `requirements.txt` e o notebook estão vazios.
 
 ## Fase 2 — EDA mínima (27/09, ~2h) — só o essencial
 - [ ] `eda.py`: `distribuicao_classes` + `plot_distribuicao_classes` (split novo) — R3
-- [ ] `imagens_por_lesao` — sustenta o split no relatório
-- [ ] `grade_exemplos` (4 por classe) — justifica a augmentation — R5
+- [ ] ~~`imagens_por_lesao`~~ → cortado (a tabela `dx × split` já traz imagens × lesões)
+- [ ] ~~`grade_exemplos`~~ → cortado (figuras de batch já servem de amostra visual); só se sobrar tempo
 - [ ] Salvar as figuras em `outputs/`
 - [ ] ~~Demografia, `dx_type`, tamanhos~~ → só se sobrar tempo (B1)
 
 ## Fase 3 — ViT do zero (27–28/09) — maior risco de implementação
-- [ ] `transformer.py`: scaled dot-product attention (devolvendo **os pesos**) — R11
-- [ ] Multi-head attention com projeções por head + concatenação — R12
-- [ ] `TransformerEncoderBlock` (FFN de 2 camadas, LayerNorm, residual) — R14
-- [ ] Patch embedding — R15
-- [ ] CLS token aprendível — R16
-- [ ] Positional encoding — R17
-- [ ] ViT completo: imagem → logits, montado sobre o `TransformerEncoderBlock` — R19
-- [ ] Notebook: seção de testes (shapes, pesos de atenção somando 1, forward de uma imagem) — R13
+- [x] `transformer.py`: scaled dot-product attention (função + módulo `ScaledDotProductAttention`, devolvendo **os pesos**) — R11
+- [x] Multi-head attention com projeções **explícitas** por head (`CabecaAtencao` em `nn.ModuleList`) + concatenação + `W_O` — R12
+- [x] `TransformerEncoderBlock` (pré-norm, FFN de 2 camadas, LayerNorm, 2 residuais) — R14
+- [x] `PatchEmbedding` (Conv2d kernel=stride=16; teste de equivalência com unfold + Linear) — R15
+- [x] CLS token aprendível — R16
+- [x] Positional encoding: `tipo_pe="aprendivel"` (padrão) ou `"senoidal"` (buffer) — R17
+- [x] ViT completo (128 px, 64+1 tokens, d=192, h=3, 6 camadas, 2,83M parâmetros): imagem → logits + pesos por camada — R19
+- [ ] Notebook: seção de testes (R11–R19, R18 com patches embaralhados, overfit de 16 imagens) — 🟡 células criadas e validadas localmente; **falta rodar no Colab** e salvar as saídas — R13
+- [ ] Textos R12 e R18 nos markdowns da seção de testes (marcadores "A escrever")
 - [ ] `/revisar A1_vision_transformers/src/transformer.py`
 
 **Pronto quando:** os testes passam e um batch real passa pelo modelo sem erro.
 
 ## Fase 4 — Treino (28–29/09) — deixar a GPU trabalhando enquanto você escreve
 - [ ] `training.py`: adaptar do projeto 2 (`fixar_seeds`, loop, `registrar_experimento` com persistência no Drive) — lembrar que o ViT do HF devolve `.logits`
+  - [ ] `fixar_seeds` como na aula 5 (`random`, `numpy`, `torch`, `cuda`) **+** `generator=torch.Generator().manual_seed(SEED)` no DataLoader de treino (a aula não tem)
 - [ ] Checkpoint por época no Drive (sobrevive à desconexão do Colab)
 - [ ] `models.py`: carregar o ViT pré-treinado, trocar o head, definir o congelamento — R21
-- [ ] **ViT pré-treinado:** 2–4 experimentos no máximo (ex.: LR × camadas descongeladas) — R5, R21
+  - [ ] Passar `id2label=INDICE_PARA_CLASSE`, `label2id=CLASSE_PARA_INDICE` e `ignore_mismatched_sizes=True` no `from_pretrained` (padrão da aula 5; o checkpoint salvo carrega os nomes das classes)
+  - [ ] R4: uma frase sobre `-224` (21k + ajuste 1k, head 1000) × `-in21k` (usado na aula 5, head 21.843) e por que a escolha
+- [ ] **ViT pré-treinado:** 2–4 experimentos no máximo (ex.: LR × camadas descongeladas) — R5, R21 — ponto de partida da aula 5: `lr=5e-5`, `weight_decay=0.01`, batch 16
 - [ ] **ViT do zero:** modelo pequeno, 1 configuração principal (+1 variação, se der tempo) — R20
-- [ ] Anotar o tempo de cada treino e o pico de memória da GPU — R8, R9
+- [ ] Anotar o tempo de cada treino e o pico de memória da GPU — R8, R9 (`with cronometrar(...)`) + memória total da GPU (`torch.cuda.get_device_properties(0).total_memory`, como na aula 5) no topo do notebook
 
 **Pronto quando:** existem 2 modelos treinados salvos e a tabela de experimentos exportada.
 
 ## Fase 5 — Avaliação (29/09)
 - [ ] `evaluation.py`: F1 macro/weighted, precision/recall por classe, matriz de confusão, curvas de loss — R2, R3
 - [ ] Avaliar **no teste** só os modelos finais (uma vez)
+- [ ] R2: registrar por que F1 macro e não só acurácia (a aula 5 usa só acurácia, adequado ao EuroSAT balanceado, não ao HAM10000 com `nv` = 67%)
 - [ ] Tabela comparativa ViT do zero × pré-treinado — R22
 
 ## Fase 6 — Attention (29/09)
 - [ ] `attention.py`: extrair a attention dos 2 modelos (HF: `output_attentions=True`; o seu: pesos devolvidos pelo módulo)
+  - [ ] ViT do HF: carregar o checkpoint ajustado com `attn_implementation="eager"` (a SDPA padrão do transformers 5.x não devolve os pesos) — padrão da aula 4
 - [ ] Heatmap de 1 head sobre a imagem (linha do CLS → grid de patches → upsample) — R24
 - [ ] Attention maps do **ViT do zero** — R26
-- [ ] Escolher 2–3 imagens (ex.: `mel` acertado, `nv` acertado, 1 erro)
+- [ ] Escolher 2–3 imagens (ex.: `mel` acertado, `nv` acertado, 1 erro) + 1 com vinheta escura forte e a da régua (checar atalhos)
+- [ ] Figura por imagem: original + attention map + barras de probabilidade top-3 (softmax), como a inferência da aula 5 — R25
 - [ ] ~~Rollout, comparar heads/camadas, acerto × erro~~ → bônus (B3, B4)
 
 ## Fase 7 — Texto (em paralelo desde a Fase 4; fechar em 30/09)
