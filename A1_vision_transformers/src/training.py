@@ -193,6 +193,17 @@ def _carregar_pesos_melhor(modelo: nn.Module, caminho_melhor: Path, device: torc
 # Treino
 # ---------------------------------------------------------------------------
 
+def _normalizar_config(config: dict) -> dict:
+    """
+    Passa a config por um ida e volta em JSON: tupla vira lista e chave int vira str.
+    Assim a config comparada é a mesma, venha ela do concluido.json (JSON) ou do
+    ultimo.pt (torch.save preserva tuplas); sem isso, um id2label com chaves int ou uma
+    tupla no config_modelo dariam um falso "config diferente" ao pular o treino.
+    Valores que o JSON não representa (ex.: torch.dtype) viram texto.
+    """
+    return json.loads(json.dumps(config, default=str))
+
+
 def _diferencas_config(salva: dict, atual: dict) -> dict:
     """Chaves cuja config salva difere da atual: {chave: (salvo, atual)}."""
     return {k: (salva.get(k), v) for k, v in atual.items() if salva.get(k) != v}
@@ -291,7 +302,7 @@ def treinar_modelo(
     # Tudo o que muda o experimento: gravado e conferido ao retomar ou pular.
     # Inclui arquitetura, critério e pesos de classe: trocar dropout, tipo de PE ou
     # a loss com o mesmo nome não daria erro no load_state_dict e misturaria dois treinos.
-    config = {
+    config = _normalizar_config({
         "epochs": epochs, "lr": lr, "weight_decay": weight_decay, "frac_warmup": frac_warmup,
         "paciencia_early_stopping": paciencia_early_stopping, "min_delta": min_delta,
         "clip_grad_norm_max": clip_grad_norm_max, "batch_size": loader_treino.batch_size,
@@ -299,13 +310,13 @@ def treinar_modelo(
         "modelo": dict(config_modelo),
         "criterio": type(criterio).__name__,
         "pesos_classe": [round(p, 6) for p in pesos_classe.tolist()],
-    }
+    })
 
     if forcar_do_zero:
         caminho_concluido.unlink(missing_ok=True)
     elif caminho_concluido.exists():
         marca = json.loads(caminho_concluido.read_text(encoding="utf-8"))
-        diferencas = _diferencas_config(marca["config"], config)
+        diferencas = _diferencas_config(_normalizar_config(marca["config"]), config)
         if diferencas:
             raise ValueError(
                 f"'{nome_experimento}' já foi concluído com outra config "
@@ -334,7 +345,7 @@ def treinar_modelo(
 
     if caminho_ultimo.exists() and not forcar_do_zero:
         estado = torch.load(caminho_ultimo, map_location=device)
-        diferencas = _diferencas_config(estado["config"], config)
+        diferencas = _diferencas_config(_normalizar_config(estado["config"]), config)
         if diferencas:
             raise ValueError(
                 f"'{nome_experimento}' já tem checkpoint com outra config "
