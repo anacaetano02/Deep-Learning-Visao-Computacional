@@ -4,7 +4,9 @@ Ordem pensada para o **caminho crítico**: cada fase destrava a seguinte. Os IDs
 são os do [REQUISITOS.md](REQUISITOS.md). Meta: fechar a A1 até **30/09** para sobrar
 01–05/10 para A2, A3, A4 e o relatório.
 
-Estado em 28/09: Fases 0, 1 e 3 concluídas (Fase 2 reduzida ao essencial). Próximo: Fase 4 (treino).
+Estado em 28/09 (noite): Fases 0, 1 e 3 concluídas (Fase 2 reduzida ao essencial). Fase 4 em
+andamento: `training.py` validado no Colab (smoke test), treino do ViT do zero disparado, `models.py`
+escrito e corrigido (falta rodar). Próximo: `CONFIG_PRE` + `smoke_pre` e os treinos do pré-treinado.
 Meta: A1 funcionalmente fechada até 30/09 à noite (A2, A3 e A4 ainda inteiras).
 
 ---
@@ -64,15 +66,22 @@ Meta: A1 funcionalmente fechada até 30/09 à noite (A2, A3 e A4 ainda inteiras)
 **Pronto quando:** os testes passam e um batch real passa pelo modelo sem erro.
 
 ## Fase 4 — Treino (28–29/09) — deixar a GPU trabalhando enquanto você escreve
-- [ ] `training.py`: adaptar do projeto 2 (`fixar_seeds`, loop, `registrar_experimento` com persistência no Drive) — lembrar que o ViT do HF devolve `.logits`
-  - [ ] `fixar_seeds` como na aula 5 (`random`, `numpy`, `torch`, `cuda`) **+** `generator=torch.Generator().manual_seed(SEED)` no DataLoader de treino (a aula não tem)
-- [ ] Checkpoint por época no Drive (sobrevive à desconexão do Colab)
-- [ ] `models.py`: carregar o ViT pré-treinado, trocar o head, definir o congelamento — R21
-  - [ ] Passar `id2label=INDICE_PARA_CLASSE`, `label2id=CLASSE_PARA_INDICE` e `ignore_mismatched_sizes=True` no `from_pretrained` (padrão da aula 5; o checkpoint salvo carrega os nomes das classes)
-  - [ ] R4: uma frase sobre `-224` (21k + ajuste 1k, head 1000) × `-in21k` (usado na aula 5, head 21.843) e por que a escolha
-- [ ] **ViT pré-treinado:** 2–4 experimentos no máximo (ex.: LR × camadas descongeladas) — R5, R21 — ponto de partida da aula 5: `lr=5e-5`, `weight_decay=0.01`, batch 16
-- [ ] **ViT do zero:** modelo pequeno, 1 configuração principal (+1 variação, se der tempo) — R20
-- [ ] Anotar o tempo de cada treino e o pico de memória da GPU — R8, R9 (`with cronometrar(...)`) + memória total da GPU (`torch.cuda.get_device_properties(0).total_memory`, como na aula 5) no topo do notebook
+- [x] `training.py` (adaptado do projeto 2, revisado pelo mentor e corrigido): AMP fp16 + GradScaler, clipping, warmup + cosseno por passo, weight decay seletivo (sem decay em bias/LayerNorm/CLS/posição), `extrair_logits` (`.logits` do HF ou tupla do ViT próprio), melhor modelo e early stopping pelo F1 macro de validação, loss média ponderada exata, `registrar_experimento` em CSV no Drive
+  - [x] `fixar_seeds` (`random`, `numpy`, `torch`, `cuda`, flags do cudnn) **+** `seed=SEED` → `generator` no DataLoader de treino (`data.py`); estado do gerador salvo e restaurado na retomada
+  - [x] Hiperparâmetros obrigatórios e só por nome (`epochs`, `lr`, `weight_decay`, `config_modelo`); config salva inclui arquitetura, critério e pesos de classe, normalizada via JSON, e é conferida ao retomar/pular
+- [x] Checkpoints com gravação atômica: `ultimo.pt` (retomada; `dir_ultimo` permite deixá-lo fora do Drive), `melhor.pt` + `concluido.json` (pular o treino sem o `ultimo.pt`); testado na CPU (retomada reproduz o treino contínuo)
+- [x] Smoke test do ViT do zero no Colab (`max_passos=20`, nome `smoke_zero`): arquivos, CSV, modelo em eval OK
+- [x] Diagnóstico do gargalo: DataLoader 0,435 s/batch × GPU 0,089 s/passo → limitado pela CPU, GPU ociosa ~80% (anotado no `relatorio.md`, seção 8) → batch 64 mantido (escolhido pela otimização), cache de imagens adiado
+  - [x] Registrar no `relatorio.md` a decisão final sobre o cache e o porquê (não feito; confirmado pelos 35 min do treino)
+- [x] `CONFIG_ZERO` único na célula de setup (usado nos testes, no smoke e no treino)
+- [x] **ViT do zero:** treino `vit_zero_v1` — R20 — 36/50 épocas (early stopping), melhor F1 macro val 0,4907 (época 26), 58 s/época, 35 min; análise no `relatorio.md` (seção 9)
+  - [ ] (Opcional, só com GPU livre no fim) `vit_zero_v2` testando uma única hipótese: cosseno completo (paciência ≥ épocas)
+- [x] `models.py`: `carregar_vit_pretreinado(revisao, seed)` → `(modelo, metadados)` (head 1000→7 com `id2label`/`label2id`/`ignore_mismatched_sizes`, fp32, SHA obrigatório, semente antes do head) + `congelar(modelo, blocos_treinaveis)` → dict para o config — R21 (revisado e corrigido; **ainda não rodou**)
+  - [ ] R4: justificar `-224` (21k + ajuste 1k, head 1000) × `-in21k` (usado na aula 5, head 21.843) no markdown
+- [ ] Notebook: `REVISAO_CHECKPOINT_PRE` (SHA via `HfApi().model_info(...).sha`) + `CONFIG_PRE` no setup (`"modelo"`: checkpoint, revisão, `blocos_treinaveis`; `"treino"`: lr ~5e-5, wd 0,01, ~10 épocas, paciência ~3)
+- [ ] `smoke_pre` (`max_passos=20`, `dir_ultimo=DIR_CHECKPOINTS_LOCAL`): conferir fp32, `metadados["img"] == TAMANHO_PRE`, contagem de treináveis, `cls_token`/`position_embeddings` sem decay, s/passo e VRAM com batch 32; depois olhar a lixeira do Drive (`melhor.pt` ~344 MB)
+- [ ] **ViT pré-treinado:** 2–4 experimentos no máximo (ex.: só head × últimos N blocos × tudo) — R5, R21 — ponto de partida da aula 5: `lr=5e-5`, `weight_decay=0.01`; pensar se o linear probe precisa de lr maior
+- [ ] Anotar o tempo de cada treino e o pico de memória da GPU — R8, R9 (`with cronometrar(...)`, já com VRAM alocada e reservada) + memória total da GPU (`torch.cuda.get_device_properties(0).total_memory`, como na aula 5) no topo do notebook
 
 **Pronto quando:** existem 2 modelos treinados salvos e a tabela de experimentos exportada.
 
@@ -107,7 +116,7 @@ Escrever **enquanto os treinos rodam**. Cada item vira um markdown no notebook e
 
 ## Fase 8 — Fechamento (30/09)
 - [ ] Célula inicial com o tempo estimado de execução e o uso de memória — R8, R9
-- [ ] Flag para **pular os treinos** e carregar checkpoints (o professor não precisa esperar horas), mantendo a opção de treinar
+- [ ] Flag para **pular os treinos** e carregar checkpoints (o professor não precisa esperar horas), mantendo a opção de treinar — base pronta: com `melhor.pt` + `concluido.json`, `treinar_modelo` só carrega; falta decidir onde publicar esses arquivos (HF Hub, Release ou Drive compartilhado) e os `historico/*.csv`
 - [ ] "Restart & Run All" num Colab T4 **limpo**, nos dois modos (local e Drive) — R6, R7
 - [ ] Salvar o notebook com os outputs
 - [ ] Tag no Git da versão entregue (o notebook clona essa tag)

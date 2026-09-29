@@ -110,8 +110,8 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 ### Treino e comparação (rubrica, seção 3)
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R20 | Treinar o ViT do zero no HAM10000 | ⬜ pendente | src/training.py |
-| R21 | Fine-tuning de ViT pré-treinado no mesmo domínio, substituindo o classification head | ⬜ pendente | src/models.py, src/training.py |
+| R20 | Treinar o ViT do zero no HAM10000 | ✅ `vit_zero_v1`: 36/50 épocas (early stopping), melhor F1 macro de validação 0,4907 na época 26, ~35 min na T4; registrado em `experimentos.csv` | src/training.py; A1_vision_transformers.ipynb |
+| R21 | Fine-tuning de ViT pré-treinado no mesmo domínio, substituindo o classification head | 🟡 `models.py` pronto (head 1000→7, congelamento por blocos); falta rodar e treinar | src/models.py, src/training.py |
 | R22 | Tabela quantitativa comparando ViT do zero × ViT pré-treinado | ⬜ pendente | src/evaluation.py; A1_vision_transformers.ipynb; relatório |
 | R23 | Justificar a escolha de arquitetura para o domínio com base nos dados da comparação | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
 
