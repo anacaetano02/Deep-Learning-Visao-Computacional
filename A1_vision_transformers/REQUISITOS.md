@@ -2,7 +2,7 @@
 
 **Disciplina:** Deep Learning and Vision — Computer Vision
 **Professor(a):** [não informado]
-**Prazo:** 05/10/2026
+**Prazo:** 10/10/2026 (adiado; prazo original 05/10/2026)
 **Formato:** individual
 
 > Esta é a Atividade 1 de 4 do Projeto da Disciplina (A2: CLIP/ADS-16, A3: CNN/Kaggle,
@@ -132,6 +132,10 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 | R31 | Discutir o que você mudaria (limitações e próximos passos) | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
 
 ## Requisitos opcionais / bônus
+> ⏸️ **Só começar os bônus depois que as 4 atividades (A1–A4) estiverem finalizadas**:
+> todos os requisitos obrigatórios ✅, relatório em PDF e ZIP prontos. Se ainda sobrar
+> tempo antes do prazo, escolher os bônus por ordem de valor para a análise.
+
 Nenhum definido no enunciado nem na rubrica. Itens do guia pessoal
 ([docs/guia_projeto_vit.md](docs/guia_projeto_vit.md)), que não são exigência do professor:
 | ID | Requisito | Status | Arquivo(s) |
@@ -140,6 +144,7 @@ Nenhum definido no enunciado nem na rubrica. Itens do guia pessoal
 | B2 | Comparar estratégias de balanceamento (class weights, sampler, focal loss) | ⬜ pendente | src/training.py (pesos, sampler, FocalLoss) |
 | B3 | Comparar attention entre heads/camadas ou usar attention rollout | ⬜ pendente | src/attention.py |
 | B4 | Comparar attention em casos de acerto × erro | ⬜ pendente | src/attention.py, src/evaluation.py (exemplos de erro) |
+| B5 | Métricas por ranking no teste: ROC one-vs-rest com AUC macro, curva Precision-Recall com average precision (mais informativa para `df`/`vasc`, que são raras) e análise do limiar de `mel` (sensibilidade × especificidade). Pré-requisito: `evaluation.py` guardar as probabilidades do softmax, não só as predições | ⬜ pendente | src/evaluation.py; A1_vision_transformers.ipynb |
 
 ## Restrições (o que NÃO pode)
 - O professor não proibiu bibliotecas nem uso de IA (confirmado pelo aluno).
