@@ -90,6 +90,19 @@ def carregar_vit_pretreinado(
     return modelo, metadados
 
 
+def blocos_vit(modelo: ViTForImageClassification) -> torch.nn.ModuleList:
+    """
+    Os 12 blocos do encoder. No transformers 5.x ficam em `vit.layers`; no 4.x ficavam em
+    `vit.encoder.layer` (o caminho que a aula e a maioria dos tutoriais usam).
+    """
+    base = modelo.vit
+    blocos = base.layers if hasattr(base, "layers") else base.encoder.layer
+    assert len(blocos) == modelo.config.num_hidden_layers, (
+        f"{len(blocos)} blocos, esperava {modelo.config.num_hidden_layers}"
+    )
+    return blocos
+
+
 def congelar(modelo: ViTForImageClassification, blocos_treinaveis: int,
              treinar_layernorm_final: bool | None = None) -> dict:
     """
@@ -117,7 +130,7 @@ def congelar(modelo: ViTForImageClassification, blocos_treinaveis: int,
 
     Retorna um dict (compatível com JSON) para o config do experimento.
     """
-    blocos = modelo.vit.encoder.layer
+    blocos = blocos_vit(modelo)
     n_blocos = len(blocos)
     # type(...) is int: isinstance(True, int) é True, e congelar(m, True) viraria 1 bloco
     assert type(blocos_treinaveis) is int and 0 <= blocos_treinaveis <= n_blocos, (
