@@ -89,7 +89,7 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 | R4 | Justificar por escrito as decisões de arquitetura: por que essa arquitetura para esse domínio | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
 | R5 | Justificar por escrito as decisões de hiperparâmetros: por que esses valores | ⬜ pendente | src/training.py (tabela de experimentos); A1_vision_transformers.ipynb (markdown); relatório |
 | R6 | Notebook nomeado `A1_vision_transformers.ipynb` | ✅ | A1_vision_transformers.ipynb |
-| R7 | Notebook roda de ponta a ponta no Google Colab com GPU T4 | 🟡 Fases 0–1 rodam sem erro na T4 e requirements preenchido; falta runtime limpo e o restante do notebook | A1_vision_transformers.ipynb (setup: clone, sys.path), requirements.txt |
+| R7 | Notebook roda de ponta a ponta no Google Colab com GPU T4 | 🟡 roda sem erro na T4 até o fine-tuning do ViT pré-treinado; falta runtime limpo (com o ViT do zero treinando de verdade) e o restante do notebook (avaliação, attention) | A1_vision_transformers.ipynb (setup: clone, sys.path), requirements.txt |
 | R8 | Início do notebook informa o tempo estimado de execução | ⬜ pendente | A1_vision_transformers.ipynb (célula inicial) |
 | R9 | Início do notebook informa o uso de memória | ⬜ pendente | A1_vision_transformers.ipynb (célula inicial), src/utils.py |
 | R10 | Seção da A1 no relatório técnico em PDF: definição do problema, justificativas técnicas, métricas e análise crítica | ⬜ pendente | nome_sobrenome_deep-learning-and-vision_computer-vision.pdf |
@@ -111,7 +111,7 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
 | R20 | Treinar o ViT do zero no HAM10000 | ✅ `vit_zero_v1`: 36/50 épocas (early stopping), melhor F1 macro de validação 0,4907 na época 26, ~35 min na T4; registrado em `experimentos.csv` | src/training.py; A1_vision_transformers.ipynb |
-| R21 | Fine-tuning de ViT pré-treinado no mesmo domínio, substituindo o classification head | 🟡 `models.py` pronto (head 1000→7, congelamento por blocos); falta rodar e treinar | src/models.py, src/training.py |
+| R21 | Fine-tuning de ViT pré-treinado no mesmo domínio, substituindo o classification head | ✅ `vit_pre_v1`: full fine-tuning (12/12 blocos, 85,8M parâmetros), head 1000→7 (LOAD REPORT no notebook), 8 épocas, melhor F1 macro de validação 0,7733 na época 5, ~16 min e 4,1 GB de VRAM na T4; registrado em `experimentos.csv` (justificativa escrita pendente no R5) | src/models.py, src/training.py |
 | R22 | Tabela quantitativa comparando ViT do zero × ViT pré-treinado | ⬜ pendente | src/evaluation.py; A1_vision_transformers.ipynb; relatório |
 | R23 | Justificar a escolha de arquitetura para o domínio com base nos dados da comparação | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
 
