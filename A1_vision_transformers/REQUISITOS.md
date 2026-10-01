@@ -84,8 +84,8 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
 | R1 | Usar dataset público, rotulado, de classificação de imagens, com ≥ 2 classes, em domínio real (saúde/varejo/indústria/satélite) | ✅ HAM10000 (`marmal88/skin_cancer`, revisão fixa), deduplicado e com split por lesão validado | src/data.py (carregar, deduplicar, split); relatório (justificativa) |
-| R2 | Gerar métricas de avaliação dos modelos | ⬜ pendente | src/evaluation.py |
-| R3 | Gerar visualizações (dados, curvas de treino, resultados) | 🟡 dados: tabelas `dx × split` e figuras de batch; faltam curvas e resultados | src/eda.py (dados), src/evaluation.py (curvas, matriz de confusão) |
+| R2 | Gerar métricas de avaliação dos modelos | ✅ teste (uma vez): F1 macro, F1 weighted, acurácia, P/R/F1 por classe com support, matriz de confusão; zero 0,4257 [0,381; 0,465], pré 0,7446 [0,688; 0,788] | src/evaluation.py |
+| R3 | Gerar visualizações (dados, curvas de treino, resultados) | ✅ tabelas `dx × split`, figuras de batch, curvas dos dois treinos, matrizes de confusão, erros mais confiantes (falta comentar as figuras no texto) | src/eda.py (dados), src/evaluation.py (curvas, matriz de confusão) |
 | R4 | Justificar por escrito as decisões de arquitetura: por que essa arquitetura para esse domínio | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
 | R5 | Justificar por escrito as decisões de hiperparâmetros: por que esses valores | ⬜ pendente | src/training.py (tabela de experimentos); A1_vision_transformers.ipynb (markdown); relatório |
 | R6 | Notebook nomeado `A1_vision_transformers.ipynb` | ✅ | A1_vision_transformers.ipynb |
@@ -112,15 +112,15 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 |----|-----------|--------|------------|
 | R20 | Treinar o ViT do zero no HAM10000 | ✅ `vit_zero_v1`: 36/50 épocas (early stopping), melhor F1 macro de validação 0,4907 na época 26, ~35 min na T4; registrado em `experimentos.csv` | src/training.py; A1_vision_transformers.ipynb |
 | R21 | Fine-tuning de ViT pré-treinado no mesmo domínio, substituindo o classification head | ✅ `vit_pre_v1`: full fine-tuning (12/12 blocos, 85,8M parâmetros), head 1000→7 (LOAD REPORT no notebook), 8 épocas, melhor F1 macro de validação 0,7733 na época 5, ~16 min e 4,1 GB de VRAM na T4; registrado em `experimentos.csv` (justificativa escrita pendente no R5) | src/models.py, src/training.py |
-| R22 | Tabela quantitativa comparando ViT do zero × ViT pré-treinado | ⬜ pendente | src/evaluation.py; A1_vision_transformers.ipynb; relatório |
+| R22 | Tabela quantitativa comparando ViT do zero × ViT pré-treinado | ✅ `tabela_r22_teste.csv`: 2 baselines, F1 com IC 95% por bootstrap pareado por lesão (diferença +0,317 [0,258; 0,374]), resolução, parâmetros, épocas, minutos, VRAM (falta o texto com os confundidores) | src/evaluation.py; A1_vision_transformers.ipynb; relatório |
 | R23 | Justificar a escolha de arquitetura para o domínio com base nos dados da comparação | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
 
 ### Attention (enunciado + rubrica, seções 2 e 3)
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R24 | Visualizar attention weights como heatmap de ao menos um head, para ao menos um exemplo do domínio | ⬜ pendente | src/attention.py |
-| R25 | Interpretar por escrito o que o modelo aprende a ponderar no domínio, com base nesse heatmap | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
-| R26 | Gerar attention maps de ao menos um head **do ViT do zero** e identificar por escrito as regiões emergentes | ⬜ pendente | src/attention.py; A1_vision_transformers.ipynb (markdown); relatório |
+| R24 | Visualizar attention weights como heatmap de ao menos um head, para ao menos um exemplo do domínio | ✅ `plotar_heads`: todas as heads da última camada, CLS → patches, nos dois modelos (critério fixo de imagens) | src/attention.py |
+| R25 | Interpretar por escrito o que o modelo aprende a ponderar no domínio, com base nesse heatmap | 🟡 evidência pronta (mapas, área efetiva, atenção nos patches escuros, padrão posicional); falta o texto | A1_vision_transformers.ipynb (markdown); relatório |
+| R26 | Gerar attention maps de ao menos um head **do ViT do zero** e identificar por escrito as regiões emergentes | 🟡 mapas por head do ViT do zero + sanidade com ViT aleatório; falta rodar a checagem de padrão posicional (centro) e escrever o texto | src/attention.py; A1_vision_transformers.ipynb (markdown); relatório |
 
 ### Análises escritas (rubrica, seções 2 e 3)
 | ID | Requisito | Status | Arquivo(s) |
