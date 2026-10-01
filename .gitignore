@@ -42,3 +42,8 @@ Thumbs.db
 
 # Notas pessoais para o relatório (não versionar)
 relatorio.md
+
+# Material pessoal (não versionado)
+*.docx
+~$*
+apostila/
