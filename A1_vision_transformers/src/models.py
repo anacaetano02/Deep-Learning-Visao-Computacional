@@ -61,7 +61,8 @@ def carregar_vit_pretreinado(
     modelo = ViTForImageClassification.from_pretrained(
         checkpoint,
         revision=revisao,
-        num_labels=len(INDICE_PARA_CLASSE),
+        # O número de classes vem do id2label; passar num_labels junto gera o aviso
+        # "num_labels=7 incompatible to the id2label map of length 1000" no transformers 5.x
         id2label=INDICE_PARA_CLASSE,
         label2id=CLASSE_PARA_INDICE,
         ignore_mismatched_sizes=True,  # o checkpoint tem head 1000×768; pedimos 7×768
@@ -76,6 +77,8 @@ def carregar_vit_pretreinado(
     assert modelo.classifier.out_features == n_classes, (
         f"Head com {modelo.classifier.out_features} saídas, esperava {n_classes}"
     )
+    rotulos = {int(k): v for k, v in modelo.config.id2label.items()}
+    assert rotulos == INDICE_PARA_CLASSE, f"id2label do modelo diferente do projeto: {rotulos}"
     dtypes = {p.dtype for p in modelo.parameters()}
     assert dtypes == {torch.float32}, f"Parâmetros fora de fp32: {dtypes}"
 

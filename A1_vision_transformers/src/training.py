@@ -336,7 +336,7 @@ def treinar_modelo(
 
     historico = {
         "epoca": [], "train_loss": [], "val_loss": [], "val_f1_macro": [],
-        "grad_norm": [], "batches_overflow": [], "lr": [], "segundos": [],
+        "grad_norm": [], "batches_overflow": [], "lr": [], "segundos": [], "vram_pico_gb": [],
     }
     melhor_f1 = -1.0
     epoca_melhor = 0
@@ -361,6 +361,8 @@ def treinar_modelo(
             # workers, com sementes próprias, e não é reproduzida exatamente.
             gerador.set_state(estado["gerador"].cpu())
         historico = estado["historico"]
+        # Checkpoints de antes da coluna de VRAM: completa com None para as épocas já feitas
+        historico.setdefault("vram_pico_gb", [None] * len(historico["epoca"]))
         melhor_f1 = estado["melhor_f1"]
         epoca_melhor = estado["epoca_melhor"]
         epocas_sem_melhora = estado["epocas_sem_melhora"]
@@ -392,6 +394,8 @@ def treinar_modelo(
 
     for epoca in range(epoca_inicial, epochs + 1):
         t0 = time.time()
+        if device.type == "cuda":
+            torch.cuda.reset_peak_memory_stats(device)  # pico de VRAM medido por época (R9)
 
         # ---- treino ----
         # Acumuladores na GPU: um .item() por passo forçaria sincronizar CPU e GPU
@@ -485,6 +489,9 @@ def treinar_modelo(
         historico["grad_norm"].append(grad_norm_medio)
         historico["batches_overflow"].append(n_batches_overflow)
         historico["lr"].append(otimizador.param_groups[0]["lr"])
+        historico["vram_pico_gb"].append(
+            round(torch.cuda.max_memory_allocated(device) / 1024**3, 2) if device.type == "cuda" else None
+        )
 
         if val_f1 > melhor_f1 + min_delta:
             melhor_f1 = val_f1
