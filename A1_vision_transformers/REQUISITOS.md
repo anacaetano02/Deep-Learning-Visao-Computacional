@@ -53,7 +53,7 @@ attention weights: o que o modelo aprende a ponderar no domínio.
   Drive dele. A estrutura segue a do projeto 2 (CNN), com EDA, avaliação e
   attention em módulos próprios:
   ```
-  proj_1_vit/
+  A1_vision_transformers/
   ├── requirements.txt
   ├── REQUISITOS.md
   ├── A1_vision_transformers.ipynb
@@ -83,53 +83,53 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 ### Enunciado e formato de entrega
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R1 | Usar dataset público, rotulado, de classificação de imagens, com ≥ 2 classes, em domínio real (saúde/varejo/indústria/satélite) | ✅ HAM10000 (`marmal88/skin_cancer`, revisão fixa), deduplicado e com split por lesão validado | src/data.py (carregar, deduplicar, split); relatório (justificativa) |
+| R1 | Usar dataset público, rotulado, de classificação de imagens, com ≥ 2 classes, em domínio real (saúde/varejo/indústria/satélite) | 🟡 HAM10000 (`marmal88/skin_cancer`, revisão fixa), deduplicado e com split por lesão validado; motivo escrito (comparar com o projeto 2); falta 1 frase sobre a adequação ao enunciado e cumprir/qualificar a comparação prometida | src/data.py (carregar, deduplicar, split); relatório (justificativa) |
 | R2 | Gerar métricas de avaliação dos modelos | ✅ teste (uma vez): F1 macro, F1 weighted, acurácia, P/R/F1 por classe com support, matriz de confusão; zero 0,4257 [0,381; 0,465], pré 0,7446 [0,688; 0,788] | src/evaluation.py |
-| R3 | Gerar visualizações (dados, curvas de treino, resultados) | ✅ tabelas `dx × split`, figuras de batch, curvas dos dois treinos, matrizes de confusão, erros mais confiantes (falta comentar as figuras no texto) | src/eda.py (dados), src/evaluation.py (curvas, matriz de confusão) |
-| R4 | Justificar por escrito as decisões de arquitetura: por que essa arquitetura para esse domínio | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
-| R5 | Justificar por escrito as decisões de hiperparâmetros: por que esses valores | ⬜ pendente | src/training.py (tabela de experimentos); A1_vision_transformers.ipynb (markdown); relatório |
+| R3 | Gerar visualizações (dados, curvas de treino, resultados) | 🟡 tabelas `dx × split`, figuras de batch, curvas, matrizes, erros mais confiantes; comentário de curvas e matrizes escrito; falta comentar as figuras de batch e de erros | src/eda.py (dados), src/evaluation.py (curvas, matriz de confusão) |
+| R4 | Justificar por escrito as decisões de arquitetura: por que essa arquitetura para esse domínio | 🟡 ViT do zero justificado (seção de treino do zero); falta a justificativa da arquitetura do pré-treinado (Base/16, `-224` × `-in21k`, full FT) no markdown | A1_vision_transformers.ipynb (markdown); relatório |
+| R5 | Justificar por escrito as decisões de hiperparâmetros: por que esses valores | 🟡 zero (lr, warmup, wd, clipping, épocas, paciência, batch) e pré-processamento (resize, 0,5, D4, triângulos bege, sem ColorJitter) escritos; batch 32 e wd 0,01 do pré escritos; faltam lr 5e-5, 8 épocas e paciência = épocas do pré | src/training.py (tabela de experimentos); A1_vision_transformers.ipynb (markdown); relatório |
 | R6 | Notebook nomeado `A1_vision_transformers.ipynb` | ✅ | A1_vision_transformers.ipynb |
-| R7 | Notebook roda de ponta a ponta no Google Colab com GPU T4 | 🟡 roda sem erro na T4 até o fine-tuning do ViT pré-treinado; falta runtime limpo (com o ViT do zero treinando de verdade) e o restante do notebook (avaliação, attention) | A1_vision_transformers.ipynb (setup: clone, sys.path), requirements.txt |
-| R8 | Início do notebook informa o tempo estimado de execução | ⬜ pendente | A1_vision_transformers.ipynb (célula inicial) |
-| R9 | Início do notebook informa o uso de memória | ⬜ pendente | A1_vision_transformers.ipynb (célula inicial), src/utils.py |
+| R7 | Notebook roda de ponta a ponta no Google Colab com GPU T4 | 🟡 execução sequencial completa (1→37) com TREINAR=False e download dos checkpoints pelo link; falta runtime novo com a tag (`GIT_REF`) | A1_vision_transformers.ipynb (setup: clone, sys.path), requirements.txt |
+| R8 | Início do notebook informa o tempo estimado de execução | ✅ tabela no topo: ~6 min com checkpoints / ~60 min treinando | A1_vision_transformers.ipynb (célula inicial) |
+| R9 | Início do notebook informa o uso de memória | ✅ tabela no topo: VRAM alocada/reservada 1,2/1,4 GB (padrão) e 4,1/4,4 GB (treino); RAM ~3,1 GB | A1_vision_transformers.ipynb (célula inicial), src/utils.py |
 | R10 | Seção da A1 no relatório técnico em PDF: definição do problema, justificativas técnicas, métricas e análise crítica | ⬜ pendente | nome_sobrenome_deep-learning-and-vision_computer-vision.pdf |
 
 ### Implementação do zero (rubrica, seções 2 e 3)
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
 | R11 | Scaled dot-product attention implementada do zero como módulo PyTorch | ✅ `ScaledDotProductAttention`; testes no notebook | src/transformer.py |
-| R12 | Multi-head attention do zero, com projeções independentes por head e concatenação das saídas | ✅ `CabecaAtencao` em `ModuleList` + concat + `W_O`; teste de equivalência (texto no markdown ainda a escrever) | src/transformer.py |
+| R12 | Multi-head attention do zero, com projeções independentes por head e concatenação das saídas | ✅ `CabecaAtencao` em `ModuleList` + concat + `W_O`; teste de equivalência e texto (d_k = d/h, W_O) | src/transformer.py |
 | R13 | Módulos de attention testáveis (testes demonstrados: shapes, pesos somando 1, máscara etc.) | ✅ seção de testes executada no Colab T4 | A1_vision_transformers.ipynb (seção de testes) |
 | R14 | `TransformerEncoderBlock` completo: feedforward de duas camadas, LayerNorm e residual connections | ✅ pré-norm | src/transformer.py |
 | R15 | Patch embedding implementado | ✅ `PatchEmbedding` (teste Conv2d == unfold + Linear) | src/transformer.py |
 | R16 | CLS token aprendível | ✅ | src/transformer.py |
 | R17 | Positional encoding aplicado à sequência de tokens do ViT | ✅ aprendível (padrão) ou senoidal | src/transformer.py |
-| R18 | Explicar por escrito por que attention sem positional encoding não preserva informação posicional | 🟡 evidência pronta (testes + figura `r18_patches_embaralhados.png`); falta o texto | A1_vision_transformers.ipynb (markdown); relatório |
+| R18 | Explicar por escrito por que attention sem positional encoding não preserva informação posicional | ✅ prova Attn(PX) = P·Attn(X), testes, figura `r18_patches_embaralhados.png`, consequência no domínio e escolha do PE | A1_vision_transformers.ipynb (markdown); relatório |
 | R19 | ViT completo montado a partir do `TransformerEncoderBlock`: recebe uma imagem e retorna logits | ✅ batch real (64,3,128,128) → (64,7); overfit de 16 imagens OK | src/transformer.py |
 
 ### Treino e comparação (rubrica, seção 3)
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
 | R20 | Treinar o ViT do zero no HAM10000 | ✅ `vit_zero_v1`: 36/50 épocas (early stopping), melhor F1 macro de validação 0,4907 na época 26, ~35 min na T4; registrado em `experimentos.csv` | src/training.py; A1_vision_transformers.ipynb |
-| R21 | Fine-tuning de ViT pré-treinado no mesmo domínio, substituindo o classification head | ✅ `vit_pre_v1`: full fine-tuning (12/12 blocos, 85,8M parâmetros), head 1000→7 (LOAD REPORT no notebook), 8 épocas, melhor F1 macro de validação 0,7733 na época 5, ~16 min e 4,1 GB de VRAM na T4; registrado em `experimentos.csv` (justificativa escrita pendente no R5) | src/models.py, src/training.py |
-| R22 | Tabela quantitativa comparando ViT do zero × ViT pré-treinado | ✅ `tabela_r22_teste.csv`: 2 baselines, F1 com IC 95% por bootstrap pareado por lesão (diferença +0,317 [0,258; 0,374]), resolução, parâmetros, épocas, minutos, VRAM (falta o texto com os confundidores) | src/evaluation.py; A1_vision_transformers.ipynb; relatório |
-| R23 | Justificar a escolha de arquitetura para o domínio com base nos dados da comparação | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
+| R21 | Fine-tuning de ViT pré-treinado no mesmo domínio, substituindo o classification head | ✅ `vit_pre_v1`: full fine-tuning (12/12 blocos, 85,8M parâmetros), head 1000→7 (LOAD REPORT no notebook), 8 épocas, melhor F1 macro de validação 0,7733 na época 5, 14,8 min e 4,12 GB de VRAM na T4; registrado em `experimentos.csv` | src/models.py, src/training.py |
+| R22 | Tabela quantitativa comparando ViT do zero × ViT pré-treinado | ✅ `tabela_r22_teste.csv`: 2 baselines, F1 com IC 95% por bootstrap pareado por lesão (diferença +0,317 [0,258; 0,374]), resolução, parâmetros, épocas, minutos, VRAM; texto com os confundidores | src/evaluation.py; A1_vision_transformers.ipynb; relatório |
+| R23 | Justificar a escolha de arquitetura para o domínio com base nos dados da comparação | 🟡 escrito (F1 maior nas 7 classes, ressalvas de `bkl`/`nv`); falta ligar ao domínio/custo e separar calibração de limiar | A1_vision_transformers.ipynb (markdown); relatório |
 
 ### Attention (enunciado + rubrica, seções 2 e 3)
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
 | R24 | Visualizar attention weights como heatmap de ao menos um head, para ao menos um exemplo do domínio | ✅ `plotar_heads`: todas as heads da última camada, CLS → patches, nos dois modelos (critério fixo de imagens) | src/attention.py |
-| R25 | Interpretar por escrito o que o modelo aprende a ponderar no domínio, com base nesse heatmap | 🟡 evidência pronta (mapas, área efetiva, atenção nos patches escuros, padrão posicional); falta o texto | A1_vision_transformers.ipynb (markdown); relatório |
-| R26 | Gerar attention maps de ao menos um head **do ViT do zero** e identificar por escrito as regiões emergentes | 🟡 mapas por head do ViT do zero + sanidade com ViT aleatório; falta rodar a checagem de padrão posicional (centro) e escrever o texto | src/attention.py; A1_vision_transformers.ipynb (markdown); relatório |
+| R25 | Interpretar por escrito o que o modelo aprende a ponderar no domínio, com base nesse heatmap | 🟡 interpretação escrita (pré acompanha a lesão, borda como hipótese, viés de centro nos dois); faltam a head específica (placeholder), a faixa com as 6 imagens, os índices e "semelhantes" em vez de "iguais" | A1_vision_transformers.ipynb (markdown); relatório |
+| R26 | Gerar attention maps de ao menos um head **do ViT do zero** e identificar por escrito as regiões emergentes | 🟡 mapas por head do zero, sanidade com ViT aleatório e padrão posicional (1,9× no centro); falta descrever uma head específica do zero e a ressalva do r igual ao aleatório | src/attention.py; A1_vision_transformers.ipynb (markdown); relatório |
 
 ### Análises escritas (rubrica, seções 2 e 3)
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R27 | Analisar DeiT e Swin Transformer: o que cada um resolve que o ViT original não resolve | ⬜ pendente | relatório (e/ou markdown no notebook) |
-| R28 | Justificar quando ViTs superam CNNs e quando CNNs são preferíveis, com base no domínio escolhido | ⬜ pendente | relatório (e/ou markdown no notebook) |
-| R29 | Analisar as diferenças entre o pré-treinamento de BERT e de ViT, identificando o que cada estratégia maximiza | ⬜ pendente | relatório (e/ou markdown no notebook) |
-| R30 | Discutir o que os resultados revelam | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
-| R31 | Discutir o que você mudaria (limitações e próximos passos) | ⬜ pendente | A1_vision_transformers.ipynb (markdown); relatório |
+| R27 | Analisar DeiT e Swin Transformer: o que cada um resolve que o ViT original não resolve | 🟡 escrito; corrigir "é o regime do ViT do zero" (DeiT usa ImageNet-1k, augmentation pesada e destilação) | relatório (e/ou markdown no notebook) |
+| R28 | Justificar quando ViTs superam CNNs e quando CNNs são preferíveis, com base no domínio escolhido | 🟡 escrito; trocar "explica o 0,43" por hipótese (sem CNN treinada; confundidores do R22) e trazer argumentos de dermatoscopia | relatório (e/ou markdown no notebook) |
+| R29 | Analisar as diferenças entre o pré-treinamento de BERT e de ViT, identificando o que cada estratégia maximiza | ✅ o que cada pré-treino maximiza (MLM bidirecional × rótulo da imagem via CLS) | relatório (e/ou markdown no notebook) |
+| R30 | Discutir o que os resultados revelam | 🟡 escrito (recall de `mel`, calibração, queda val → teste); falta citar a previsão feita antes do teste e a acurácia do zero abaixo do "sempre nv" | A1_vision_transformers.ipynb (markdown); relatório |
+| R31 | Discutir o que você mudaria (limitações e próximos passos) | ✅ lista de mudanças coerente com as limitações | A1_vision_transformers.ipynb (markdown); relatório |
 
 ## Requisitos opcionais / bônus
 > ⏸️ **Só começar os bônus depois que as 4 atividades (A1–A4) estiverem finalizadas**:

@@ -2,7 +2,7 @@
 
 **Disciplina:** Deep Learning and Vision — Computer Vision
 **Professor(a):** [não informado]
-**Prazo:** 05/10/2026
+**Prazo:** 10/10/2026 (adiado; prazo original 05/10/2026)
 **Formato:** individual
 
 Regras comuns às 4 atividades. O específico de cada atividade fica no `REQUISITOS.md`
