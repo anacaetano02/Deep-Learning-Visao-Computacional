@@ -2,7 +2,7 @@
 
 **Disciplina:** Deep Learning and Vision — Computer Vision
 **Professor(a):** [não informado]
-**Prazo:** 05/10/2026
+**Prazo:** 10/10/2026
 **Formato:** individual
 
 > Atividade 2 de 4 do Projeto da Disciplina. Regras comuns (T4, ZIP, PDF, tempo e
@@ -18,9 +18,18 @@ em linguagem natural, analisando criticamente o que o modelo recupera.
 
 ## Dados e experimento
 - **Tipo de tarefa:** recuperação imagem-texto zero-shot (sem treino supervisionado)
-- **Dataset:** ADS-16 (Computational Advertising Dataset), imagens de anúncios em
-  16 categorias de produto. Pode ser o corpus inteiro ou um subconjunto de **≥ 500
-  imagens selecionadas de forma representativa**. [origem/forma de download a definir]
+- **Dataset:** ADS-16 (Computational Advertising Dataset), **300 anúncios reais em
+  20 categorias** de produto/serviço (o "16" do nome é o ano, 2016). O enunciado
+  permite o corpus inteiro ou um subconjunto de **≥ 500 imagens selecionadas de forma
+  representativa**; com 300 anúncios, usar o corpus inteiro cumpre o R1.
+  - **Fonte:** Kaggle `groffo/ads16-dataset` (download via `kagglehub`; fixar a
+    versão; testar sem credenciais num runtime limpo). [contagem a confirmar após o
+    download]
+  - As pastas de usuários (~1.200 fotos pessoais, Big Five, ratings) **não** são
+    anúncios e ficam fora do corpus.
+  - **Citação pedida pelos autores:** Roffo, G., & Vinciarelli, A. (2016, August).
+    Personality in computational advertising: A benchmark. In 4th Workshop on
+    Emotions and Personality in Personalized Systems (EMPIRE) 2016 (p. 18).
 - **Modelo:** CLIP pré-treinado (embeddings de imagem e texto). [checkpoint e
   biblioteca a definir pelo aluno]
 - **Framework:** PyTorch + [Hugging Face `transformers` ou `open_clip` — a definir]
@@ -36,7 +45,7 @@ em linguagem natural, analisando criticamente o que o modelo recupera.
 ### 2.1 — Ranking de objetos por frequência semântica
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R1 | Usar o ADS-16 inteiro ou um subconjunto de ≥ 500 imagens | ⬜ pendente | |
+| R1 | Usar o ADS-16 inteiro ou um subconjunto de ≥ 500 imagens | ✅ atendido | A2_clip_ads16.ipynb |
 | R2 | Justificar que o subconjunto (se usado) é representativo | ⬜ pendente | A2_clip_ads16.ipynb (markdown); relatório |
 | R3 | Pipeline CLIP que calcula a cosine similarity de cada imagem com ≥ 20 descrições distintas de objetos/conceitos | ⬜ pendente | |
 | R4 | Definir um threshold de similaridade | ⬜ pendente | |
@@ -88,8 +97,9 @@ Rubrica binária por item. **Seção 4 — Classificação zero-shot e busca sem
 - `A2_clip_ads16.ipynb` e a seção da A2 no relatório único (ver requisitos gerais).
 
 ## Dúvidas para o professor
-- De onde obter o ADS-16? Há uma fonte/versão recomendada?
-- As ≥ 20 descrições podem incluir as 16 categorias de produto do próprio dataset,
+- O ADS-16 tem 300 anúncios: usar o corpus inteiro atende o requisito, ou o
+  professor espera ≥ 500 imagens mesmo assim?
+- As ≥ 20 descrições podem incluir as 20 categorias de produto do próprio dataset,
   ou devem ser objetos/conceitos independentes delas (como nos exemplos "a car",
   "text and logo")?
 - "Frequência de ocorrência acima do threshold": uma imagem pode contar para vários
