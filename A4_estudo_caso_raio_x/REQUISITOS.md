@@ -36,16 +36,23 @@ cada um.
 ## Dados e experimento (4.1)
 - **Tipo de tarefa:** classificação multiclasse de raio-X de tórax (Normal,
   Pneumonia, COVID-19) + geração sintética da classe minoritária
-- **Dataset:** [a definir — o enunciado não indica o dataset do experimento]
-- **Modelos:** GAN condicional (cGAN) **ou** CycleGAN, compatível com T4 [escolha do
-  aluno]; classificador para o comparativo com × sem dados gerados [a definir]
-- **Framework:** PyTorch [a confirmar pelo aluno]
+- **Dataset:** Kaggle `tawsifurrahman/covid19-radiography-database` (COVID-19 Radiography
+  Database, Qatar Univ./Univ. Dhaka; v5): COVID 3.616, Normal 10.192, Viral Pneumonia 1.345
+  (+ Lung Opacity, fora do escopo); PNG 299×299. [contagens a confirmar no download]
+  Decisão (04/10): o enunciado não indica o dataset; escolhido por ter as 3 classes do caso e
+  ser o mais usado e documentado.
+- **Modelos:** **cGAN** (DCGAN condicional, tons de cinza, baixa resolução) para gerar
+  COVID-19; classificador do comparativo: **ResNet-18 pré-treinada** no ImageNet (versão
+  corrigida do legado), com a mesma configuração nos treinos com × sem imagens geradas.
+- **Framework:** PyTorch/torchvision
 - **Ambiente:** Google Colab com GPU T4 (ver requisitos gerais)
 - **Métrica(s) exigida(s):** **recall da classe COVID-19** (comparação com × sem
   imagens geradas)
 - **Meta de desempenho (se houver):** nenhuma
 - **Protocolo de avaliação exigido (se houver):** comparar treinos com e sem as
-  imagens geradas. [split e demais detalhes a definir pelo aluno]
+  imagens geradas. Desenho adotado: **escassez só no treino** (≈ 840 / 240 / 120, como no
+  legado) e **teste real maior**, tirado do resto do dataset, para o recall de COVID ser
+  mensurável; a GAN só vê o treino; o teste só tem imagens reais; vários seeds.
 
 ## Requisitos obrigatórios
 
