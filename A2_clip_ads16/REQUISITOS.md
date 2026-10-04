@@ -18,21 +18,22 @@ em linguagem natural, analisando criticamente o que o modelo recupera.
 
 ## Dados e experimento
 - **Tipo de tarefa:** recuperação imagem-texto zero-shot (sem treino supervisionado)
-- **Dataset:** ADS-16 (Computational Advertising Dataset), **300 anúncios reais em
-  20 categorias** de produto/serviço (o "16" do nome é o ano, 2016). O enunciado
+- **Dataset:** ADS-16 (Computational Advertising Dataset), **301 arquivos de anúncio em
+  20 categorias** de produto/serviço (o artigo fala em 300 = 20 × 15; a categoria 1 tem um
+  anúncio extra, `1/16.png`, que não é duplicata). O "16" do nome é o ano, 2016. O enunciado
   permite o corpus inteiro ou um subconjunto de **≥ 500 imagens selecionadas de forma
-  representativa**; com 300 anúncios, usar o corpus inteiro cumpre o R1.
-  - **Fonte:** Kaggle `groffo/ads16-dataset` (download via `kagglehub`; fixar a
-    versão; testar sem credenciais num runtime limpo). [contagem a confirmar após o
-    download]
+  representativa**; com 301 anúncios, usar o corpus inteiro cumpre o R1.
+  - **Fonte:** Kaggle `groffo/ads16-dataset`, versão 1, via `kagglehub` (sem credenciais;
+    testado com download real e com o cache do Colab). Impressão digital: 3.429 arquivos,
+    assinatura `e9071258c790f1e9`.
   - As pastas de usuários (~1.200 fotos pessoais, Big Five, ratings) **não** são
     anúncios e ficam fora do corpus.
   - **Citação pedida pelos autores:** Roffo, G., & Vinciarelli, A. (2016, August).
     Personality in computational advertising: A benchmark. In 4th Workshop on
     Emotions and Personality in Personalized Systems (EMPIRE) 2016 (p. 18).
-- **Modelo:** CLIP pré-treinado (embeddings de imagem e texto). [checkpoint e
-  biblioteca a definir pelo aluno]
-- **Framework:** PyTorch + [Hugging Face `transformers` ou `open_clip` — a definir]
+- **Modelo:** CLIP pré-treinado `openai/clip-vit-large-patch14-336`, revisão
+  `ce19dc912ca5cd21c8a653c79e251e808ccabcd1`, fp32 (embeddings de 768 dimensões).
+- **Framework:** PyTorch + Hugging Face `transformers` 5.17.0
 - **Ambiente:** Google Colab com GPU T4 (ver requisitos gerais)
 - **Métrica(s) exigida(s):** cosine similarity imagem-texto; score médio de
   similaridade e frequência de ocorrência acima do threshold (ranking)
@@ -46,33 +47,36 @@ em linguagem natural, analisando criticamente o que o modelo recupera.
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
 | R1 | Usar o ADS-16 inteiro ou um subconjunto de ≥ 500 imagens | ✅ atendido | A2_clip_ads16.ipynb |
-| R2 | Justificar que o subconjunto (se usado) é representativo | ⬜ pendente | A2_clip_ads16.ipynb (markdown); relatório |
-| R3 | Pipeline CLIP que calcula a cosine similarity de cada imagem com ≥ 20 descrições distintas de objetos/conceitos | ⬜ pendente | |
-| R4 | Definir um threshold de similaridade | ⬜ pendente | |
-| R5 | Justificar o threshold escolhido | ⬜ pendente | A2_clip_ads16.ipynb (markdown); relatório |
-| R6 | Ranking dos objetos mais frequentes, com score médio de similaridade e frequência de ocorrência acima do threshold | ⬜ pendente | |
-| R7 | Visualizar os 5 objetos mais encontrados com exemplos de imagens do corpus que confirmem cada categoria | ⬜ pendente | |
+| R2 | Justificar que o subconjunto (se usado) é representativo | ✅ atendido (não se aplica: corpus inteiro; justificado) | A2_clip_ads16.ipynb (markdown); relatório |
+| R3 | Pipeline CLIP que calcula a cosine similarity de cada imagem com ≥ 20 descrições distintas de objetos/conceitos | ✅ atendido | A2_clip_ads16.ipynb |
+| R4 | Definir um threshold de similaridade | ✅ atendido (0,17) | A2_clip_ads16.ipynb |
+| R5 | Justificar o threshold escolhido | ✅ atendido | A2_clip_ads16.ipynb (markdown); relatório |
+| R6 | Ranking dos objetos mais frequentes, com score médio de similaridade e frequência de ocorrência acima do threshold | ✅ atendido | A2_clip_ads16.ipynb |
+| R7 | Visualizar os 5 objetos mais encontrados com exemplos de imagens do corpus que confirmem cada categoria | ✅ atendido | A2_clip_ads16.ipynb |
 
 ### 2.2 — Busca semântica por consulta textual
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R8 | Busca de imagens por texto: dada uma consulta, retornar as top-5 imagens mais similares do corpus | ⬜ pendente | |
-| R9 | Executar ≥ 8 consultas variando em especificidade (genérico → específico) e abstração (concreto → abstrato) | ⬜ pendente | |
-| R10 | Documentar os resultados de cada consulta (top-5 exibidas) | ⬜ pendente | A2_clip_ads16.ipynb |
-| R11 | Analisar, para cada consulta, se o modelo recupera o que ela descreve ou interpreta de forma inesperada | ⬜ pendente | A2_clip_ads16.ipynb (markdown); relatório |
+| R8 | Busca de imagens por texto: dada uma consulta, retornar as top-5 imagens mais similares do corpus | ✅ atendido | A2_clip_ads16.ipynb |
+| R9 | Executar ≥ 8 consultas variando em especificidade (genérico → específico) e abstração (concreto → abstrato) | ✅ atendido (13 consultas) | A2_clip_ads16.ipynb |
+| R10 | Documentar os resultados de cada consulta (top-5 exibidas) | ✅ atendido | A2_clip_ads16.ipynb |
+| R11 | Analisar, para cada consulta, se o modelo recupera o que ela descreve ou interpreta de forma inesperada | ✅ atendido | A2_clip_ads16.ipynb (markdown); relatório |
 
 ### Análises escritas (rubrica, seção 4)
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R12 | Analisar o alinhamento das representações visuais e textuais no CLIP | ⬜ pendente | relatório (e/ou markdown no notebook) |
-| R13 | Explicar por que o pré-treinamento contrastivo habilita recuperação semântica sem treino supervisionado | ⬜ pendente | relatório (e/ou markdown no notebook) |
-| R14 | Comparar o mecanismo de consulta textual do CLIP com a tokenização de sequências no BERT, explicando o papel do padding e da attention mask | ⬜ pendente | relatório (e/ou markdown no notebook) |
+| R12 | Analisar o alinhamento das representações visuais e textuais no CLIP | ✅ atendido (notebook) | relatório (e/ou markdown no notebook) |
+| R13 | Explicar por que o pré-treinamento contrastivo habilita recuperação semântica sem treino supervisionado | ✅ atendido (notebook) | relatório (e/ou markdown no notebook) |
+| R14 | Comparar o mecanismo de consulta textual do CLIP com a tokenização de sequências no BERT, explicando o papel do padding e da attention mask | ✅ atendido (notebook) | relatório (e/ou markdown no notebook) |
 
 ### Entrega
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R15 | Notebook `A2_clip_ads16.ipynb`, rodando no Colab T4, com tempo estimado e uso de memória no início | ⬜ pendente | A2_clip_ads16.ipynb |
+| R15 | Notebook `A2_clip_ads16.ipynb`, rodando no Colab T4, com tempo estimado e uso de memória no início | 🟡 falta o run final com a tag | A2_clip_ads16.ipynb |
 | R16 | Seção da A2 no relatório: definição do problema, justificativas técnicas, métricas e análise crítica | ⬜ pendente | relatório |
+
+> Status de 04/10/2026. Os textos dos markdowns foram ajustados a pedido da autora e ainda
+> passam pela revisão dela; R12–R14 também precisam ir para a seção da A2 no relatório (R16).
 
 ## Requisitos opcionais / bônus
 Nenhum definido no enunciado nem na rubrica.
@@ -97,10 +101,11 @@ Rubrica binária por item. **Seção 4 — Classificação zero-shot e busca sem
 - `A2_clip_ads16.ipynb` e a seção da A2 no relatório único (ver requisitos gerais).
 
 ## Dúvidas para o professor
-- O ADS-16 tem 300 anúncios: usar o corpus inteiro atende o requisito, ou o
+- O ADS-16 tem 301 anúncios: usar o corpus inteiro atende o requisito, ou o
   professor espera ≥ 500 imagens mesmo assim?
 - As ≥ 20 descrições podem incluir as 20 categorias de produto do próprio dataset,
   ou devem ser objetos/conceitos independentes delas (como nos exemplos "a car",
   "text and logo")?
 - "Frequência de ocorrência acima do threshold": uma imagem pode contar para vários
   objetos ao mesmo tempo (multi-rótulo), ou só para o de maior similaridade?
+  (Decisão adotada: multi-rótulo, justificada no notebook.)

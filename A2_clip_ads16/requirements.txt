@@ -1,0 +1,11 @@
+# Versões lidas no runtime do Colab (GPU T4) em 04/10/2026, célula do apêndice do notebook.
+# torch sem o rótulo local (+cu130): pela PEP 440, "torch==2.11.0" é satisfeito pela build
+# 2.11.0+cu130 do Colab (nada é reinstalado) e continua instalável via PyPI.
+torch==2.11.0
+transformers==5.17.0
+huggingface_hub==1.31.0
+kagglehub==1.0.2
+numpy==2.1.3
+pandas==2.2.3
+pillow==11.3.0
+matplotlib==3.10.0
