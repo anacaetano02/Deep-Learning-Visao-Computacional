@@ -59,11 +59,11 @@ augmentation e normalização seriam testadas e por quê.
 ### Entrega
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R15 | Notebook `A3_cnn_kaggle.ipynb`, rodando no Colab T4, com tempo estimado e uso de memória no início | 🟡 falta o run final com a tag | A3_cnn_kaggle.ipynb |
+| R15 | Notebook `A3_cnn_kaggle.ipynb`, rodando no Colab T4, com tempo estimado e uso de memória no início | ✅ atendido | A3_cnn_kaggle.ipynb |
 | R16 | Seção da A3 no relatório: definição do problema, justificativas técnicas, métricas e análise crítica | ⬜ pendente | relatório |
 
-> Status de 04/10/2026: código executado (2ª execução) e textos escritos; os textos foram
-> ajustados a pedido da autora e ainda passam pela revisão dela. R16 (relatório PDF) pendente.
+> Status de 04/10/2026: versão entregue verificada (tag `a3-entrega`, Restart & Run All sem erros, split
+> versionado confere, 261/262). Textos ajustados a pedido da autora, a revisar por ela. R16 (relatório PDF) pendente.
 
 ## Requisitos opcionais / bônus
 Nenhum definido no enunciado nem na rubrica.
