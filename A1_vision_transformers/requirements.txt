@@ -1,10 +1,12 @@
-# Versões lidas no runtime do Colab (GPU T4) em 27/09/2026, célula de versões do notebook.
-# torch/torchvision sem o rótulo local (+cu128): pela PEP 440, "torch==2.11.0" é satisfeito
-# pela build 2.11.0+cu128 do Colab (nada é reinstalado) e continua instalável via PyPI.
-# Build no Colab: torch 2.11.0+cu128, torchvision 0.26.0+cu128.
+# Versões lidas no runtime do Colab (GPU T4) em 04/10/2026, na execução final (célula de versões do
+# notebook). Os treinos (29/09–01/10) usaram transformers 5.16.1 e CUDA cu128; o F1 de validação
+# reproduzido é idêntico (0,4907 / 0,7733).
+# torch/torchvision sem o rótulo local (+cu130): pela PEP 440, "torch==2.11.0" é satisfeito
+# pela build 2.11.0+cu130 do Colab (nada é reinstalado) e continua instalável via PyPI.
+# Build no Colab: torch 2.11.0+cu130, torchvision 0.26.0+cu130.
 torch==2.11.0
 torchvision==0.26.0
-transformers==5.16.1
+transformers==5.17.0
 datasets==4.8.5
 polars==1.35.2
 pandas==2.2.3

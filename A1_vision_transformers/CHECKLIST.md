@@ -20,7 +20,7 @@ Meta: A1 funcionalmente fechada até 30/09 à noite (A2, A3 e A4 ainda inteiras)
   - [x] Mover a célula de `git pull` para **depois** do clone (hoje ela usa `REPO_DIR` antes de ele existir)
   - [x] Testar o modo `SALVAR_NO_DRIVE = True` (Drive montado, artefatos + zip no Drive)
   - [x] Commit + push do notebook
-- [x] `requirements.txt` com as versões do Colab T4 (torch sem o rótulo local `+cu128`) — R7
+- [x] `requirements.txt` com as versões do Colab T4 (torch sem o rótulo local `+cu130`; execução final em 04/10) — R7
 - [x] Testar o setup num runtime **limpo** do Colab (27/09, exec 1→12 sem erro)
 
 **Pronto quando:** o notebook clona o repo e importa `src` num Colab novo.

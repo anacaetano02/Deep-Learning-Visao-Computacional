@@ -89,9 +89,9 @@ attention weights: o que o modelo aprende a ponderar no domínio.
 | R4 | Justificar por escrito as decisões de arquitetura: por que essa arquitetura para esse domínio | ✅ arquitetura do ViT do zero (treino do zero) e do pré-treinado (`-224` × `-in21k`, Base/16, full FT) justificadas | A1_vision_transformers.ipynb (markdown); relatório |
 | R5 | Justificar por escrito as decisões de hiperparâmetros: por que esses valores | ✅ hiperparâmetros dos dois modelos e pré-processamento (resize, 0,5, D4, triângulos bege, sem ColorJitter) justificados | src/training.py (tabela de experimentos); A1_vision_transformers.ipynb (markdown); relatório |
 | R6 | Notebook nomeado `A1_vision_transformers.ipynb` | ✅ | A1_vision_transformers.ipynb |
-| R7 | Notebook roda de ponta a ponta no Google Colab com GPU T4 | 🟡 execução sequencial completa (1→37) com TREINAR=False e download dos checkpoints pelo link; falta runtime novo com a tag (`GIT_REF`) | A1_vision_transformers.ipynb (setup: clone, sys.path), requirements.txt |
+| R7 | Notebook roda de ponta a ponta no Google Colab com GPU T4 | ✅ Restart & Run All em runtime novo na T4 (04/10/2026), `GIT_REF="a1-entrega"`, TREINAR=False: 37 células sem erros, ~6 min, F1 de validação reproduzido | A1_vision_transformers.ipynb (setup: clone, sys.path), requirements.txt |
 | R8 | Início do notebook informa o tempo estimado de execução | ✅ tabela no topo: ~6 min com checkpoints / ~60 min treinando | A1_vision_transformers.ipynb (célula inicial) |
-| R9 | Início do notebook informa o uso de memória | ✅ tabela no topo: VRAM alocada/reservada 1,2/1,4 GB (padrão) e 4,1/4,4 GB (treino); RAM ~3,1 GB | A1_vision_transformers.ipynb (célula inicial), src/utils.py |
+| R9 | Início do notebook informa o uso de memória | ✅ tabela no topo: VRAM alocada/reservada 1,2/1,4 GB (padrão) e 4,1/4,4 GB (treino); RAM ~3,5 GB | A1_vision_transformers.ipynb (célula inicial), src/utils.py |
 | R10 | Seção da A1 no relatório técnico em PDF: definição do problema, justificativas técnicas, métricas e análise crítica | ⬜ pendente | nome_sobrenome_deep-learning-and-vision_computer-vision.pdf |
 
 ### Implementação do zero (rubrica, seções 2 e 3)
