@@ -61,7 +61,8 @@ def carregar_imagem(caminho) -> Image.Image:
 
     convert("RGB") direto descarta o alfa: o pixel transparente fica com a cor que estava "por baixo"
     (muitas vezes preto), e o CLIP veria um fundo que não existe no anúncio. Por isso RGBA/P/LA são
-    compostos sobre fundo branco antes da conversão.
+    compostos sobre fundo branco antes da conversão. Numa imagem com alfa 255 em todos os pixels (caso
+    dos 9 anúncios RGBA/P do ADS-16), a composição não muda nada: o tratamento é preventivo.
     """
     with Image.open(caminho) as img:
         img.load()
