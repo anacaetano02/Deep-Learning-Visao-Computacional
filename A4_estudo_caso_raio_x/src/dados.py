@@ -51,6 +51,26 @@ def carregar_imagem(caminho, modo: str = "L") -> Image.Image:
         return img.convert(modo)
 
 
+def vetores_pixels(caminhos, lado: int = 64):
+    """Cada imagem reduzida a `lado`×`lado` em tons de cinza, centrada e com norma 1 (tensor N × lado²).
+
+    O produto interno entre dois vetores é a correlação de Pearson dos pixels: perto de 1 só para a mesma
+    foto (recomprimida, redimensionada, com outro contraste). Features semânticas (ex.: ResNet do ImageNet)
+    não servem para isso em raio-X: todos os tórax ficam parecidos (cosseno ~0,98 entre pacientes
+    diferentes) e os grupos de "duplicatas" se encadeiam.
+    """
+    import numpy as np
+    import torch
+
+    vetores = np.empty((len(caminhos), lado * lado), dtype=np.float32)
+    for i, caminho in enumerate(caminhos):
+        a = np.asarray(carregar_imagem(caminho, "L").resize((lado, lado), Image.BILINEAR), dtype=np.float32).ravel()
+        a -= a.mean()
+        norma = np.linalg.norm(a)
+        vetores[i] = a / norma if norma > 0 else a
+    return torch.from_numpy(vetores)
+
+
 def _fonte(url: str) -> str:
     """Resumo da origem a partir da URL dos metadados: domínio e, no Kaggle, o dataset/competição."""
     url = str(url).strip()
