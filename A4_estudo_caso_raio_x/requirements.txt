@@ -1,0 +1,14 @@
+# Versões do runtime do Colab (GPU T4) usadas na A3 (04/10/2026); conferir com o apêndice da execução final da A4.
+# torch/torchvision sem o rótulo local (+cu130): pela PEP 440, "torch==2.11.0" é satisfeito pela
+# build 2.11.0+cu130 do Colab (nada é reinstalado) e continua instalável via PyPI.
+torch==2.11.0
+torchvision==0.26.0
+scikit-learn==1.6.1
+kagglehub==1.0.2
+numpy==2.1.3
+pandas==2.2.3
+openpyxl==3.1.5
+pillow==11.3.0
+matplotlib==3.10.0
+seaborn==0.13.2
+scipy==1.16.3

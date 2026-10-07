@@ -38,7 +38,9 @@ cada um.
   Pneumonia, COVID-19) + geração sintética da classe minoritária
 - **Dataset:** Kaggle `tawsifurrahman/covid19-radiography-database` (COVID-19 Radiography
   Database, Qatar Univ./Univ. Dhaka; v5): COVID 3.616, Normal 10.192, Viral Pneumonia 1.345
-  (+ Lung Opacity, fora do escopo); PNG 299×299. [contagens a confirmar no download]
+  (+ Lung Opacity, fora do escopo); PNG 299×299 (contagens confirmadas no download, 06/10). Após remover
+  duplicatas exatas (md5) e quase-duplicatas (correlação de pixels ≥ 0,97): Normal 10.179, Viral Pneumonia
+  1.338, COVID 3.337.
   Decisão (04/10): o enunciado não indica o dataset; escolhido por ter as 3 classes do caso e
   ser o mais usado e documentado.
 - **Modelos:** **cGAN** (DCGAN condicional, tons de cinza, baixa resolução) para gerar
@@ -66,13 +68,13 @@ cada um.
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
 | R3 | Escolher e justificar a abordagem generativa (cGAN para augmentation sintética ou CycleGAN para tradução entre domínios) | ⬜ pendente | A4_estudo_caso_raio_x.ipynb (markdown); relatório |
-| R4 | Implementar a GAN para gerar imagens do domínio médico (classe COVID-19), compatível com T4 | ⬜ pendente | |
-| R5 | Training loop adversarial correto (gerador × discriminador) | ⬜ pendente | |
+| R4 | Implementar a GAN para gerar imagens do domínio médico (classe COVID-19), compatível com T4 | ✅ atendido | src/gan.py; A4_estudo_caso_raio_x.ipynb |
+| R5 | Training loop adversarial correto (gerador × discriminador) | ✅ atendido | src/gan.py (treinar_cgan) |
 | R6 | Diagnosticar instabilidades de treinamento (mode collapse ou divergência) | ⬜ pendente | A4_estudo_caso_raio_x.ipynb; relatório |
 | R7 | Aplicar ao menos uma estratégia de mitigação da instabilidade, com evidência de melhoria | ⬜ pendente | |
-| R8 | Treinar o classificador **sem** as imagens geradas | ⬜ pendente | |
-| R9 | Treinar o classificador **com** as imagens geradas | ⬜ pendente | |
-| R10 | Comparar a recall da classe COVID-19 entre os dois treinos e discutir o impacto | ⬜ pendente | A4_estudo_caso_raio_x.ipynb; relatório |
+| R8 | Treinar o classificador **sem** as imagens geradas | ✅ atendido | src/classificador.py; A4_estudo_caso_raio_x.ipynb |
+| R9 | Treinar o classificador **com** as imagens geradas | ✅ atendido | A4_estudo_caso_raio_x.ipynb |
+| R10 | Comparar a recall da classe COVID-19 entre os dois treinos e discutir o impacto | ✅ atendido | A4_estudo_caso_raio_x.ipynb; relatório |
 
 ### 4.1 — Plano de melhoria
 | ID | Requisito | Status | Arquivo(s) |
