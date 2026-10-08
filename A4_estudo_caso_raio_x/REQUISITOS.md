@@ -61,17 +61,17 @@ cada um.
 ### 4.1 — Diagnóstico do projeto de raio-X
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R1 | Identificar ao menos 5 problemas técnicos do projeto legado | ⬜ pendente | relatório (e/ou markdown no notebook) |
-| R2 | Justificar o impacto clínico esperado de cada problema | ⬜ pendente | relatório (e/ou markdown no notebook) |
+| R1 | Identificar ao menos 5 problemas técnicos do projeto legado | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (diagnóstico); relatório |
+| R2 | Justificar o impacto clínico esperado de cada problema | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (diagnóstico); relatório |
 
 ### 4.1 — GAN e experimento
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R3 | Escolher e justificar a abordagem generativa (cGAN para augmentation sintética ou CycleGAN para tradução entre domínios) | ⬜ pendente | A4_estudo_caso_raio_x.ipynb (markdown); relatório |
+| R3 | Escolher e justificar a abordagem generativa (cGAN para augmentation sintética ou CycleGAN para tradução entre domínios) | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (cGAN); relatório |
 | R4 | Implementar a GAN para gerar imagens do domínio médico (classe COVID-19), compatível com T4 | ✅ atendido | src/gan.py; A4_estudo_caso_raio_x.ipynb |
 | R5 | Training loop adversarial correto (gerador × discriminador) | ✅ atendido | src/gan.py (treinar_cgan) |
-| R6 | Diagnosticar instabilidades de treinamento (mode collapse ou divergência) | ⬜ pendente | A4_estudo_caso_raio_x.ipynb; relatório |
-| R7 | Aplicar ao menos uma estratégia de mitigação da instabilidade, com evidência de melhoria | ⬜ pendente | |
+| R6 | Diagnosticar instabilidades de treinamento (mode collapse ou divergência) | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (instabilidade, apêndice pós-hoc); relatório |
+| R7 | Aplicar ao menos uma estratégia de mitigação da instabilidade, com evidência de melhoria | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (instabilidade); relatório |
 | R8 | Treinar o classificador **sem** as imagens geradas | ✅ atendido | src/classificador.py; A4_estudo_caso_raio_x.ipynb |
 | R9 | Treinar o classificador **com** as imagens geradas | ✅ atendido | A4_estudo_caso_raio_x.ipynb |
 | R10 | Comparar a recall da classe COVID-19 entre os dois treinos e discutir o impacto | ✅ atendido | A4_estudo_caso_raio_x.ipynb; relatório |
@@ -79,21 +79,21 @@ cada um.
 ### 4.1 — Plano de melhoria
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R11 | Plano de melhoria integrado que endereça todos os problemas identificados em R1 | ⬜ pendente | relatório |
-| R12 | O plano cobre modelo, métrica, augmentation sintética e critério de adoção clínica | ⬜ pendente | relatório |
+| R11 | Plano de melhoria integrado que endereça todos os problemas identificados em R1 | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (plano); relatório |
+| R12 | O plano cobre modelo, métrica, augmentation sintética e critério de adoção clínica | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (plano); relatório |
 
 ### 4.2 — Tráfego urbano (só relatório)
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R13 | Identificar ao menos 4 problemas técnicos/metodológicos da solução de classificação de fluxo | ⬜ pendente | relatório |
-| R14 | Explicar os impactos operacionais esperados de cada problema em produção (chuva, noite, ângulos) | ⬜ pendente | relatório |
-| R15 | Explicar os riscos de transfer learning de ImageNet para classificação de fluxo de tráfego | ⬜ pendente | relatório |
-| R16 | Discutir por escrito a abordagem proposta para cada problema | ⬜ pendente | relatório |
+| R13 | Identificar ao menos 4 problemas técnicos/metodológicos da solução de classificação de fluxo | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (4.2); relatório |
+| R14 | Explicar os impactos operacionais esperados de cada problema em produção (chuva, noite, ângulos) | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (4.2); relatório |
+| R15 | Explicar os riscos de transfer learning de ImageNet para classificação de fluxo de tráfego | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (4.2); relatório |
+| R16 | Discutir por escrito a abordagem proposta para cada problema | ✅ atendido no notebook (levar ao relatório, R18) | A4_estudo_caso_raio_x.ipynb (4.2); relatório |
 
 ### Entrega
 | ID | Requisito | Status | Arquivo(s) |
 |----|-----------|--------|------------|
-| R17 | Notebook `A4_estudo_caso_raio_x.ipynb` (4.1), rodando no Colab T4, com tempo estimado e uso de memória no início | ⬜ pendente | A4_estudo_caso_raio_x.ipynb |
+| R17 | Notebook `A4_estudo_caso_raio_x.ipynb` (4.1), rodando no Colab T4, com tempo estimado e uso de memória no início | ✅ atendido | A4_estudo_caso_raio_x.ipynb (topo e apêndice: ~65 min, VRAM 1,10 GB, RAM 3,4 GB; tag a4-entrega) |
 | R18 | Seções da 4.1 e da 4.2 no relatório: definição do problema, justificativas técnicas, métricas e análise crítica | ⬜ pendente | relatório |
 
 ## Requisitos opcionais / bônus
