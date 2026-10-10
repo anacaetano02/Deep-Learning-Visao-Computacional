@@ -47,3 +47,9 @@ relatorio.md
 *.docx
 ~$*
 apostila/
+
+# Documentos de trabalho (requisitos, checklists e guias): ficam só no computador local
+REQUISITOS_GERAIS.md
+*/REQUISITOS.md
+A1_vision_transformers/CHECKLIST.md
+A1_vision_transformers/docs/
